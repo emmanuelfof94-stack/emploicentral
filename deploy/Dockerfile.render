@@ -1,0 +1,32 @@
+# Image "tout-en-un" pour Render : build du front Vite, puis backend FastAPI
+# qui sert l'API ET le front statique. Build context = racine du projet (emploi/).
+# Différences vs Fly : on écoute sur $PORT (imposé par Render) et le stockage est
+# local/éphémère (pas de volume persistant en offre gratuite ; la base est sur Neon).
+
+# --- Étape 1 : build du SPA ---
+FROM node:20-slim AS frontend
+WORKDIR /fe
+ENV OVERVIEW_TITLE="EmploiCentral" \
+    OVERVIEW_DESCRIPTION="Une plateforme intelligente pour centraliser les opportunités d'emploi."
+RUN corepack enable && corepack prepare pnpm@9 --activate
+COPY app/frontend/package.json app/frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY app/frontend/ ./
+RUN pnpm build
+
+# --- Étape 2 : backend + front statique ---
+FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app/backend
+
+COPY app/backend/requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+COPY app/backend/ .
+# Le build Vite est servi par FastAPI depuis ./static (cf. main.py)
+COPY --from=frontend /fe/dist ./static
+
+# Render fournit $PORT (défaut 10000). On crée le dossier de stockage local (éphémère).
+CMD ["sh", "-c", "mkdir -p \"${STORAGE_ROOT:-/app/backend/storage}\" && exec python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

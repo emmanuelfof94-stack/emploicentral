@@ -1,0 +1,199 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Target, Loader2 } from 'lucide-react';
+
+type Mode = 'login' | 'register';
+
+export default function Login() {
+  const { user, loading, refreshAuth } = useAuth();
+  const navigate = useNavigate();
+
+  const [mode, setMode] = useState<Mode>('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Already authenticated → go to dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      const endpoint =
+        mode === 'register' ? '/api/v1/auth/register' : '/api/v1/auth/login';
+      const body =
+        mode === 'register'
+          ? { email, password, name: name || undefined }
+          : { email, password };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const detail =
+          (Array.isArray(data?.detail)
+            ? data.detail[0]?.msg
+            : data?.detail) || 'Une erreur est survenue';
+        toast.error(detail);
+        return;
+      }
+
+      if (!data?.token) {
+        toast.error('Réponse invalide du serveur');
+        return;
+      }
+
+      // The web-sdk reads the JWT from localStorage['token'] for all requests.
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('isLougOutManual', 'false');
+
+      toast.success(
+        mode === 'register' ? 'Compte créé avec succès' : 'Connexion réussie'
+      );
+
+      await refreshAuth();
+      // Full reload (not SPA navigate): the web-sdk client in src/lib/api.ts reads
+      // the JWT from localStorage only once, at creation time. Without a reload the
+      // already-created client keeps making requests with no Authorization header,
+      // so authenticated calls (e.g. CV upload) fail with 401.
+      window.location.assign('/dashboard');
+    } catch {
+      toast.error('Impossible de contacter le serveur');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <header className="border-b border-slate-100 bg-white/70 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30">
+              <Target className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xl font-bold text-slate-900">
+              JobMatch <span className="text-blue-600">AI</span>
+            </span>
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <h1 className="text-2xl font-bold text-slate-900">
+              {mode === 'login' ? 'Connexion' : 'Créer un compte'}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {mode === 'login'
+                ? 'Accédez à votre tableau de bord et vos offres'
+                : 'Rejoignez la plateforme en quelques secondes'}
+            </p>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'register' && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nom (optionnel)</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Votre nom"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="vous@exemple.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={mode === 'register' ? '6 caractères minimum' : '••••••••'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={mode === 'register' ? 6 : undefined}
+                  autoComplete={
+                    mode === 'register' ? 'new-password' : 'current-password'
+                  }
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-brand-gradient hover:opacity-95 transition-opacity"
+                disabled={submitting}
+              >
+                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {mode === 'login' ? 'Se connecter' : "S'inscrire"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center text-sm text-slate-600">
+              {mode === 'login' ? (
+                <>
+                  Pas encore de compte ?{' '}
+                  <button
+                    type="button"
+                    className="text-blue-600 font-medium hover:underline"
+                    onClick={() => setMode('register')}
+                  >
+                    Créer un compte
+                  </button>
+                </>
+              ) : (
+                <>
+                  Déjà inscrit ?{' '}
+                  <button
+                    type="button"
+                    className="text-blue-600 font-medium hover:underline"
+                    onClick={() => setMode('login')}
+                  >
+                    Se connecter
+                  </button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}

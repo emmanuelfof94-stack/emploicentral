@@ -1,0 +1,46 @@
+{
+    "title": "alert_preferences",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID from auth"
+        },
+        "notify_email": {
+            "type": "boolean",
+            "description": "Enable email notifications"
+        },
+        "notify_whatsapp": {
+            "type": "boolean",
+            "description": "Enable WhatsApp notifications"
+        },
+        "notify_push": {
+            "type": "boolean",
+            "description": "Enable push notifications"
+        },
+        "min_score": {
+            "type": "integer",
+            "description": "Minimum compatibility score to trigger alert"
+        },
+        "sectors": {
+            "type": "string",
+            "description": "JSON array of sectors to monitor"
+        },
+        "locations": {
+            "type": "string",
+            "description": "JSON array of preferred locations"
+        },
+        "contract_types": {
+            "type": "string",
+            "description": "JSON array of preferred contract types"
+        }
+    },
+    "required": [
+        "id",
+        "user_id"
+    ]
+}

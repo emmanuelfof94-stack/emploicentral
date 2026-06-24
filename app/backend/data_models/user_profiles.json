@@ -1,0 +1,62 @@
+{
+    "title": "user_profiles",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID from auth"
+        },
+        "full_name": {
+            "type": "string",
+            "description": "Full name extracted from CV"
+        },
+        "email": {
+            "type": "string",
+            "description": "Contact email"
+        },
+        "phone": {
+            "type": "string",
+            "description": "Phone number"
+        },
+        "skills": {
+            "type": "string",
+            "description": "JSON array of skills extracted from CV"
+        },
+        "experience_years": {
+            "type": "integer",
+            "description": "Total years of experience"
+        },
+        "education": {
+            "type": "string",
+            "description": "Education level and details"
+        },
+        "sector": {
+            "type": "string",
+            "description": "Industry sector"
+        },
+        "job_title": {
+            "type": "string",
+            "description": "Current or desired job title"
+        },
+        "location": {
+            "type": "string",
+            "description": "Preferred work location"
+        },
+        "cv_object_key": {
+            "type": "string",
+            "description": "Object storage key for uploaded CV"
+        },
+        "profile_summary": {
+            "type": "string",
+            "description": "AI-generated profile summary"
+        }
+    },
+    "required": [
+        "id",
+        "user_id"
+    ]
+}

@@ -1,0 +1,43 @@
+# Déploiement EmploiCentral : backend (uvicorn) + caddy (front + HTTPS + proxy /api)
+# Usage : depuis deploy/ -> `docker compose up -d --build`
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    env_file: ./.env
+    environment:
+      # DB et stockage sur volumes persistants (override des défauts du code)
+      DATABASE_URL: "sqlite+aiosqlite:////data/app.db"
+      ENVIRONMENT: "prod"
+      DEBUG: "false"
+    volumes:
+      - backend-db:/data
+      - backend-storage:/app/backend/storage
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    depends_on:
+      - backend
+    environment:
+      DOMAIN: "${DOMAIN}"
+      TLS_EMAIL: "${TLS_EMAIL}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  backend-db:
+  backend-storage:
+  caddy-data:
+  caddy-config:

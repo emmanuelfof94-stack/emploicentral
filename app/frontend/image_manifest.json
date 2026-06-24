@@ -1,0 +1,48 @@
+{
+  "status": "success",
+  "results": [
+    {
+      "status": "success",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmsfyaahpq/hero-banner-job-platform.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmsfyaahpq/hero-banner-job-platform.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmsfyaahpq/hero-banner-job-platform.png",
+      "message": "Image generated successfully.\n\nNote: The image is on CDN and will be displayed automatically. Just describe what you created briefly, no need to mention filenames or URLs.",
+      "description": "Modern job platform hero banner showing a professional person looking at a laptop with floating job cards and AI neural network connections in blue and purple gradient, clean corporate style",
+      "style": "photorealistic",
+      "filename": "hero-banner-job-platform.jpg"
+    },
+    {
+      "status": "success",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmqniaahra/cv-analysis-illustration.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmqniaahra/cv-analysis-illustration.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmqniaahra/cv-analysis-illustration.png",
+      "message": "Image generated successfully.\n\nNote: The image is on CDN and will be displayed automatically. Just describe what you created briefly, no need to mention filenames or URLs.",
+      "description": "Abstract illustration of a CV document being analyzed by AI with glowing data points, skills tags floating around, blue and teal color scheme, modern tech aesthetic",
+      "style": "photorealistic",
+      "filename": "cv-analysis-illustration.jpg"
+    },
+    {
+      "status": "success",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmtliaahrq/compatibility-score-visual.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmtliaahrq/compatibility-score-visual.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmtliaahrq/compatibility-score-visual.png",
+      "message": "Image generated successfully.\n\nNote: The image is on CDN and will be displayed automatically. Just describe what you created briefly, no need to mention filenames or URLs.",
+      "description": "Professional dashboard interface mockup showing job compatibility scores with circular progress indicators, match percentages, clean modern UI design with blue accents",
+      "style": "photorealistic",
+      "filename": "compatibility-score-visual.jpg"
+    },
+    {
+      "status": "success",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmovyaahqq/alerts-notification-system.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmovyaahqq/alerts-notification-system.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1271697/2026-06-03/pzzmovyaahqq/alerts-notification-system.png",
+      "message": "Image generated successfully.\n\nNote: The image is on CDN and will be displayed automatically. Just describe what you created briefly, no need to mention filenames or URLs.",
+      "description": "Notification bell with smartphone showing job alerts, WhatsApp and email icons floating around, modern flat design with gradient purple and blue background",
+      "style": "photorealistic",
+      "filename": "alerts-notification-system.jpg"
+    }
+  ],
+  "success_count": 4,
+  "failed_count": 0,
+  "message": "Generated 4/4 images"
+}

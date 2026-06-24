@@ -1,0 +1,45 @@
+# Config Fly.io — EmploiCentral (déploiement tout-en-un, gratuit)
+# Le nom "app" doit être UNIQUE sur Fly et détermine l'URL : <app>.fly.dev
+# Change-le si "emploicentral-topjob" est déjà pris (fly launch le proposera).
+app = "emploicentral-topjob"
+primary_region = "cdg"   # Paris — proche France/Afrique de l'Ouest
+
+[build]
+  dockerfile = "deploy/Dockerfile.fly"
+
+# Variables NON secrètes (les secrets vont via `fly secrets set`, voir README).
+[env]
+  ENVIRONMENT = "prod"
+  DEBUG = "false"
+  PORT = "8000"
+  DATABASE_URL = "sqlite+aiosqlite:////data/app.db"
+  STORAGE_ROOT = "/data/storage"
+  FRONTEND_URL = "https://emploicentral-topjob.fly.dev"
+  JWT_ALGORITHM = "HS256"
+  JWT_EXPIRE_MINUTES = "1440"
+  OIDC_SCOPE = "openid profile email"
+  # Ce compte (à l'inscription/connexion) devient admin -> accès au tableau de bord analytics.
+  ADMIN_USER_EMAIL = "emmanuelfof94@gmail.com"
+  AGGREGATOR_ENABLED = "true"
+  AGGREGATOR_INTERVAL_MINUTES = "360"
+  AGGREGATOR_PAGES = "4"
+  AGGREGATOR_MAX_PER_RUN = "40"
+  AGGREGATOR_RUN_ON_STARTUP = "true"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Économie max (gratuit) : la machine s'arrête quand inactive et redémarre à la
+  # 1re visite (cold start de quelques secondes). L'agrégation tourne au démarrage.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"   # 256mb risque l'OOM (PyMuPDF + SQLAlchemy + scheduler)
+
+# Volume persistant : SQLite (/data/app.db) + CV (/data/storage)
+[mounts]
+  source = "data"
+  destination = "/data"

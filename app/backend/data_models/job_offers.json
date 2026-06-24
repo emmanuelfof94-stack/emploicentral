@@ -1,0 +1,63 @@
+{
+    "title": "job_offers",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "title": {
+            "type": "string",
+            "description": "Job title"
+        },
+        "company": {
+            "type": "string",
+            "description": "Company name"
+        },
+        "location": {
+            "type": "string",
+            "description": "Job location"
+        },
+        "contract_type": {
+            "type": "string",
+            "description": "CDI, CDD, Freelance, Stage, etc."
+        },
+        "sector": {
+            "type": "string",
+            "description": "Industry sector"
+        },
+        "description": {
+            "type": "string",
+            "description": "Full job description"
+        },
+        "requirements": {
+            "type": "string",
+            "description": "JSON array of required skills/qualifications"
+        },
+        "salary_range": {
+            "type": "string",
+            "description": "Salary range if available"
+        },
+        "source": {
+            "type": "string",
+            "description": "Source website of the job offer"
+        },
+        "source_url": {
+            "type": "string",
+            "description": "Original URL of the job posting"
+        },
+        "posted_date": {
+            "type": "string",
+            "description": "Date when job was posted"
+        },
+        "is_active": {
+            "type": "boolean",
+            "description": "Whether the job is still active"
+        }
+    },
+    "required": [
+        "id",
+        "title",
+        "company"
+    ]
+}

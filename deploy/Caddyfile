@@ -1,0 +1,21 @@
+# Caddy : HTTPS automatique (Let's Encrypt), sert le SPA, proxifie /api vers le backend.
+{
+	email {$TLS_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# API -> conteneur backend (réseau interne docker-compose)
+	@api path /api/*
+	handle @api {
+		reverse_proxy backend:8000
+	}
+
+	# SPA : tout le reste sert les fichiers statiques, fallback index.html
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

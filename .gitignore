@@ -1,0 +1,24 @@
+# Python
+app/.venv/
+__pycache__/
+*.pyc
+app/backend/logs/
+app/backend/app.db
+app/backend/*.db
+app/backend/storage/
+
+# Node
+app/frontend/node_modules/
+app/frontend/dist/
+
+# Env
+app/.env
+.env
+
+# Misc
+.DS_Store
+*.log
+Plateforme emploi intelligente.zip
+
+# Front buildé copié pour le déploiement tout-en-un (régénéré par Docker)
+app/backend/static/

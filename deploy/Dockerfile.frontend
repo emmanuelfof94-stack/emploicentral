@@ -1,0 +1,20 @@
+# Frontend — build Vite (React/shadcn) puis servi par Caddy (HTTPS auto + proxy /api)
+# Build context = racine du projet (emploi/)
+
+# --- Étape 1 : build du SPA ---
+FROM node:20-slim AS build
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+# Manifests d'abord (cache)
+COPY app/frontend/package.json app/frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Sources + build
+COPY app/frontend/ ./
+RUN pnpm build
+
+# --- Étape 2 : Caddy sert dist/ et proxifie /api vers le backend ---
+FROM caddy:2-alpine
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv

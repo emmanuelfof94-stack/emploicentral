@@ -1,0 +1,63 @@
+# Blueprint Render — EmploiCentral (déploiement tout-en-un, offre gratuite).
+# La base de données est externe (Neon Postgres). Le stockage des CV est local
+# et éphémère sur l'offre gratuite (pas de disque persistant).
+services:
+  - type: web
+    name: emploicentral
+    runtime: docker
+    plan: free
+    region: frankfurt          # le plus proche de l'Afrique de l'Ouest chez Render
+    dockerfilePath: ./deploy/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: prod
+      - key: DEBUG
+        value: "false"
+      - key: STORAGE_ROOT
+        value: /app/backend/storage
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "1440"
+      - key: OIDC_SCOPE
+        value: openid profile email
+      - key: ADMIN_USER_EMAIL
+        value: emmanuelfof94@gmail.com
+      - key: AGGREGATOR_ENABLED
+        value: "true"
+      - key: AGGREGATOR_INTERVAL_MINUTES
+        value: "360"
+      - key: AGGREGATOR_PAGES
+        value: "4"
+      - key: AGGREGATOR_MAX_PER_RUN
+        value: "40"
+      # Sur Render gratuit l'app s'endort : on relance une agrégation à chaque réveil
+      # (tâche de fond ~15s après le démarrage, non bloquante).
+      - key: AGGREGATOR_RUN_ON_STARTUP
+        value: "true"
+      # Secrets générés automatiquement par Render.
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: MASK_KEY
+        generateValue: true
+      # À renseigner dans le dashboard Render (valeurs sensibles / connues après coup).
+      - key: DATABASE_URL          # connection string Neon (postgresql://...)
+        sync: false
+      - key: FRONTEND_URL          # l'URL Render finale (https://emploicentral.onrender.com)
+        sync: false
+      # SMTP Gmail (déjà utilisé en prod).
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: emmanuelfof94@gmail.com
+      - key: SMTP_FROM
+        value: emmanuelfof94@gmail.com
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: SMTP_PASSWORD         # mot de passe d'application Gmail (16 car.)
+        sync: false

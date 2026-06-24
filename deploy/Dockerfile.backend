@@ -1,0 +1,24 @@
+# Backend — FastAPI + uvicorn (SQLite, scheduler d'agrégation, stockage disque)
+# Build context = racine du projet (emploi/)
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app/backend
+
+# Dépendances d'abord (cache Docker)
+COPY app/backend/requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Code backend
+COPY app/backend/ .
+
+# Répertoires persistés (montés en volume au runtime)
+RUN mkdir -p /data /app/backend/storage
+
+EXPOSE 8000
+
+# Pas de --reload en prod. Le lifespan initialise la DB, le seed et le scheduler.
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
