@@ -12,6 +12,7 @@ import {
 import Navbar from '../components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAnalyticsStats, type AnalyticsStats } from '../api/analytics';
+import { Link } from 'react-router-dom';
 import { Eye, Users, CalendarDays, TrendingUp, Loader2 } from 'lucide-react';
 
 const RANGES = [
@@ -73,8 +74,15 @@ export default function AdminAnalytics() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Statistiques</h1>
             <p className="text-sm text-slate-500">
-              Fréquentation du site (visites humaines, hors bots).
+              Fréquentation du site (visites <strong>anonymes</strong>, hors bots). Pour voir les
+              <em> comptes inscrits</em> et leur activité, ouvrez « Personnes inscrites ».
             </p>
+            <Link
+              to="/admin/users"
+              className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              <Users className="w-4 h-4" /> Voir les personnes inscrites
+            </Link>
           </div>
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
             {RANGES.map((r) => (

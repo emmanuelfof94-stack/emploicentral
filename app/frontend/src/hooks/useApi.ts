@@ -520,6 +520,74 @@ export function useCvTemplates(enabled = true) {
   });
 }
 
+// ---- Admin : personnes inscrites + leur activité ----
+export interface AdminUserRow {
+  id: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  auth_type?: string; // 'local' | 'platform'
+  created_at?: string;
+  last_login?: string;
+  phone?: string;
+  location?: string;
+  sector?: string;
+  job_title?: string;
+  cv_analyzed?: boolean;
+}
+
+export interface AdminJobActivity {
+  job_id: number;
+  title?: string;
+  company?: string;
+  saved?: boolean;
+  status?: string;
+  updated_at?: string;
+}
+
+export interface AdminTrainingActivity {
+  id: number;
+  theme: string;
+  level?: string;
+  status?: string;
+  created_at?: string;
+}
+
+export interface AdminUserActivity {
+  user: AdminUserRow;
+  counts: Record<string, number | boolean>;
+  saved_jobs: AdminJobActivity[];
+  applications: AdminJobActivity[];
+  trainings: AdminTrainingActivity[];
+}
+
+export function useAdminUsers(q = '', enabled = true) {
+  return useQuery({
+    queryKey: ['admin_users', q],
+    enabled,
+    queryFn: async (): Promise<{ total: number; items: AdminUserRow[] }> => {
+      const url = `/api/v1/users/admin/all${q ? `?q=${encodeURIComponent(q)}` : ''}`;
+      const res = await client.apiCall.invoke({ url, method: 'GET' });
+      const body = res?.data ?? res;
+      return { total: Number(body?.total ?? 0), items: (body?.items ?? []) as AdminUserRow[] };
+    },
+  });
+}
+
+export function useAdminUserActivity(userId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['admin_user_activity', userId],
+    enabled: enabled && !!userId,
+    queryFn: async (): Promise<AdminUserActivity> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/users/admin/${encodeURIComponent(userId || '')}/activity`,
+        method: 'GET',
+      });
+      return (res?.data ?? res) as AdminUserActivity;
+    },
+  });
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });
