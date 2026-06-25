@@ -15,6 +15,7 @@ import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminTrainingPartners from './pages/AdminTrainingPartners';
+import AdminTrainingCourses from './pages/AdminTrainingCourses';
 import Alerts from './pages/Alerts';
 import Trainings from './pages/Trainings';
 import AuthCallback from './pages/AuthCallback';
@@ -45,6 +46,7 @@ const AppRoutes = () => (
     <Route path="/trainings" element={<ProtectedRoute><Trainings /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/partners" element={<ProtectedAdminRoute><AdminTrainingPartners /></ProtectedAdminRoute>} />
+    <Route path="/admin/courses" element={<ProtectedAdminRoute><AdminTrainingCourses /></ProtectedAdminRoute>} />
     <Route path="/auth/callback" element={<AuthCallback />} />
     <Route path="/auth/error" element={<AuthError />} />
   </Routes>

@@ -2,12 +2,16 @@ import { useState } from 'react';
 import Markdown from 'markdown-to-jsx';
 import Navbar from '../components/Navbar';
 import PartnerCard from '../components/PartnerCard';
+import CourseCard from '../components/CourseCard';
 import {
   useTrainingThemes,
   useMyTrainings,
   useTrainingActions,
   usePartners,
   usePartnerSuggestions,
+  useCourses,
+  useCourseDomains,
+  useCourseSuggestions,
   type TrainingRequest,
 } from '../hooks/useApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,23 +36,125 @@ import {
   ChevronDown,
   ChevronUp,
   Handshake,
+  Library,
+  BookOpen,
 } from 'lucide-react';
 
-/** Organismes recommandés pour un parcours donné (gratuits d'abord). */
-function SuggestedPartners({ theme }: { theme: string }) {
-  const { data: partners, isLoading } = usePartnerSuggestions(theme);
-  if (isLoading || !partners || partners.length === 0) return null;
+/** Suggestions (formations réelles + organismes) rattachées à un parcours. */
+function SuggestionsForTheme({ theme }: { theme: string }) {
+  const { data: courses } = useCourseSuggestions(theme);
+  const { data: partners } = usePartnerSuggestions(theme);
+  const hasCourses = courses && courses.length > 0;
+  const hasPartners = partners && partners.length > 0;
+  if (!hasCourses && !hasPartners) return null;
+
   return (
-    <div className="mt-5 pt-4 border-t border-slate-100">
-      <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-        <Handshake className="h-4 w-4 text-primary" />
-        Organismes recommandés pour cette formation
-      </h4>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {partners.map((p) => (
-          <PartnerCard key={p.id} partner={p} compact />
-        ))}
+    <div className="mt-5 pt-4 border-t border-slate-100 space-y-4">
+      {hasCourses && (
+        <div>
+          <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <BookOpen className="h-4 w-4 text-primary" />
+            Formations recommandées
+          </h4>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {courses!.map((c) => (
+              <CourseCard key={c.id} course={c} compact />
+            ))}
+          </div>
+        </div>
+      )}
+      {hasPartners && (
+        <div>
+          <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <Handshake className="h-4 w-4 text-primary" />
+            Organismes recommandés
+          </h4>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {partners!.map((p) => (
+              <PartnerCard key={p.id} partner={p} compact />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Catalogue parcourable : filtres domaine + gratuit/payant. */
+function CatalogSection() {
+  const [domain, setDomain] = useState<string>('');
+  const [onlyFree, setOnlyFree] = useState(false);
+  const { data: domains } = useCourseDomains();
+  const { data: courses, isLoading } = useCourses({
+    domain: domain || undefined,
+    isFree: onlyFree ? true : undefined,
+  });
+
+  // On masque toute la section tant qu'aucune formation n'existe au catalogue.
+  const noCatalog = !isLoading && !domain && !onlyFree && (!courses || courses.length === 0);
+  if (noCatalog) return null;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Library className="h-5 w-5 text-primary" />
+          Catalogue de formations
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Des formations concrètes proposées par nos organismes partenaires.
+        </p>
       </div>
+
+      {/* Filtres */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOnlyFree((v) => !v)}
+          className={`text-xs rounded-full border px-3 py-1 transition-colors ${
+            onlyFree
+              ? 'bg-emerald-600 text-white border-emerald-600'
+              : 'bg-background hover:bg-muted border-border'
+          }`}
+        >
+          Gratuites uniquement
+        </button>
+        {domain && (
+          <button
+            type="button"
+            onClick={() => setDomain('')}
+            className="text-xs rounded-full border px-3 py-1 bg-primary text-primary-foreground border-primary"
+          >
+            {domain} ✕
+          </button>
+        )}
+        {(domains ?? [])
+          .filter((d) => d !== domain)
+          .map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDomain(d)}
+              className="text-xs rounded-full border px-3 py-1 bg-background hover:bg-muted border-border transition-colors"
+            >
+              {d}
+            </button>
+          ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Chargement du catalogue…
+        </div>
+      ) : !courses || courses.length === 0 ? (
+        <p className="text-muted-foreground">Aucune formation ne correspond à ce filtre.</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {courses.map((c) => (
+            <CourseCard key={c.id} course={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -249,7 +355,7 @@ export default function Trainings() {
                       <div className="prose prose-sm max-w-none dark:prose-invert">
                         <Markdown>{tr.program}</Markdown>
                       </div>
-                      <SuggestedPartners theme={tr.theme} />
+                      <SuggestionsForTheme theme={tr.theme} />
                     </CardContent>
                   )}
                 </Card>
@@ -257,6 +363,9 @@ export default function Trainings() {
             })
           )}
         </div>
+
+        {/* Catalogue de formations concrètes */}
+        <CatalogSection />
 
         {/* Annuaire des organismes partenaires */}
         {partners && partners.length > 0 && (

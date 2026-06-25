@@ -63,6 +63,10 @@ _R = {
     "ibm": ("IBM SkillsBuild", "https://skillsbuild.org", "compétences numériques en français, badges"),
     "elementsofai": ("Elements of AI", "https://www.elementsofai.com/fr", "intro à l'IA en français, certifiée"),
     "googleai": ("Google AI Essentials", "https://grow.google/ai-essentials/", "fondamentaux de l'IA"),
+    "anthropic": ("Anthropic Academy", "https://www.anthropic.com/learn", "cours gratuits sur l'IA et l'usage de Claude (API, MCP, Claude Code)"),
+    "openai_academy": ("OpenAI Academy", "https://academy.openai.com", "ateliers en direct, tutoriels et ressources IA gratuits"),
+    "objectif_ia": ("Objectif IA (OpenClassrooms)", "https://openclassrooms.com/fr/courses/7050006-objectif-ia", "5h pour comprendre l'IA, en français, sans prérequis"),
+    "edx": ("edX", "https://www.edx.org", "cours universitaires (ex. « AI For Everyone »), audit gratuit"),
 }
 
 # (mots-clés de thématique) -> clés de ressources prioritaires
@@ -74,7 +78,7 @@ _RESOURCE_RULES = [
     (("projet", "management", "leadership", "ressources humaines", "rh"), ["coursera", "openclassrooms", "alison"]),
     (("web", "dévelop", "develop", "data", "données", "donnees", "informatique", "cyber", "program", "code"), ["freecodecamp", "cisco", "openclassrooms", "coursera"]),
     (("vente", "commercial", "négoci", "negoci", "client"), ["hubspot", "openclassrooms", "coursera", "alison"]),
-    (("ia", "intelligence artificielle", "machine learning", "data science"), ["elementsofai", "googleai", "openclassrooms", "coursera"]),
+    (("ia", "intelligence artificielle", "machine learning", "data science"), ["anthropic", "openai_academy", "googleai", "elementsofai", "objectif_ia", "ibm", "coursera", "mslearn", "edx"]),
     (("entrepreneur", "création", "creation", "business"), ["coursera", "openclassrooms", "funmooc", "alison"]),
 ]
 
@@ -91,13 +95,13 @@ def _curated_resource_keys(theme: str) -> List[str]:
             keys.extend(res_keys)
     if not keys:
         keys = list(_GENERAL_RESOURCES)
-    # dédup en conservant l'ordre, max 5
+    # dédup en conservant l'ordre, max 8 (les thématiques IA ont une liste plus riche)
     seen, ordered = set(), []
     for k in keys:
         if k not in seen:
             seen.add(k)
             ordered.append(k)
-    return ordered[:5]
+    return ordered[:8]
 
 
 def _resources_markdown(theme: str) -> str:

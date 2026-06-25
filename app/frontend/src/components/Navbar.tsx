@@ -14,6 +14,7 @@ import {
   Shield,
   GraduationCap,
   Building2,
+  Library,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotificationsBell from './NotificationsBell';
@@ -41,6 +42,7 @@ export default function Navbar() {
           ...navLinks,
           { to: '/admin', label: 'Admin', icon: Shield },
           { to: '/admin/partners', label: 'Partenaires', icon: Building2 },
+          { to: '/admin/courses', label: 'Catalogue', icon: Library },
         ]
       : navLinks;
 

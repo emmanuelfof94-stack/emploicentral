@@ -365,6 +365,137 @@ export function useAdminPartnerActions() {
   return { create, update, remove };
 }
 
+// ---- Catalogue de formations (offres concrètes rattachées à un partenaire) ----
+export interface TrainingCourse {
+  id: number;
+  partner_id?: number;
+  partner_name?: string;
+  title: string;
+  description?: string;
+  domain?: string;
+  level?: string;
+  duration?: string;
+  price?: string;
+  is_free?: boolean;
+  format?: string;
+  location?: string;
+  url?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+export interface CourseFilters {
+  domain?: string;
+  isFree?: boolean;
+  q?: string;
+}
+
+// Catalogue actif parcourable par le candidat (gratuites d'abord).
+export function useCourses(filters: CourseFilters = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['training_courses', filters],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<TrainingCourse[]> => {
+      const params = new URLSearchParams();
+      if (filters.domain) params.set('domain', filters.domain);
+      if (filters.isFree !== undefined) params.set('is_free', String(filters.isFree));
+      if (filters.q) params.set('q', filters.q);
+      const qs = params.toString();
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/training-courses${qs ? `?${qs}` : ''}`,
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as TrainingCourse[];
+    },
+  });
+}
+
+export function useCourseDomains(enabled = true) {
+  return useQuery({
+    queryKey: ['training_course_domains'],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<string[]> => {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/training-courses/domains',
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as string[];
+    },
+  });
+}
+
+// Formations réelles recommandées pour une thématique (pertinentes, gratuites d'abord).
+export function useCourseSuggestions(theme?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['training_course_suggestions', theme],
+    enabled: enabled && !!theme,
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<TrainingCourse[]> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/training-courses/suggest?theme=${encodeURIComponent(theme || '')}`,
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as TrainingCourse[];
+    },
+  });
+}
+
+// ---- Admin : gestion du catalogue ----
+export function useAdminCourses(enabled = true) {
+  return useQuery({
+    queryKey: ['admin_training_courses'],
+    enabled,
+    queryFn: async (): Promise<TrainingCourse[]> => {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/training-courses/admin/all',
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as TrainingCourse[];
+    },
+  });
+}
+
+export function useAdminCourseActions() {
+  const invalidate = useInvalidate();
+  const refresh = async () => {
+    await invalidate('admin_training_courses');
+    await invalidate('training_courses');
+    await invalidate('training_course_domains');
+  };
+  const create = async (data: Partial<TrainingCourse>) => {
+    const res = await client.apiCall.invoke({
+      url: '/api/v1/training-courses/admin',
+      method: 'POST',
+      data,
+    });
+    await refresh();
+    return (res?.data ?? res) as TrainingCourse;
+  };
+  const update = async (id: number, data: Partial<TrainingCourse>) => {
+    const res = await client.apiCall.invoke({
+      url: `/api/v1/training-courses/admin/${id}`,
+      method: 'PUT',
+      data,
+    });
+    await refresh();
+    return (res?.data ?? res) as TrainingCourse;
+  };
+  const remove = async (id: number) => {
+    await client.apiCall.invoke({
+      url: `/api/v1/training-courses/admin/${id}`,
+      method: 'DELETE',
+    });
+    await refresh();
+  };
+  return { create, update, remove };
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });
