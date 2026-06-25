@@ -39,12 +39,6 @@ interface ScoreItem {
   summary?: string;
 }
 
-const WEST_AFRICA = [
-  "Côte d'Ivoire", 'Sénégal', 'Mali', 'Burkina Faso', 'Guinée', 'Togo', 'Bénin',
-  'Niger', 'Ghana', 'Cameroun', 'Abidjan', 'Dakar', 'Bamako', 'Ouagadougou',
-  'Lomé', 'Cotonou', 'Niamey', 'Accra', 'Douala', 'Yaoundé', 'Conakry',
-];
-
 function scoreBg(score: number) {
   if (score >= 75) return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
   if (score >= 50) return 'bg-blue-50 text-blue-700 ring-blue-200';
@@ -214,11 +208,12 @@ export default function Jobs() {
     return m;
   }, [scoreList]);
 
+  // Toutes les offres actives. On NE filtre PAS par liste blanche de pays : elle
+  // masquait à tort des offres légitimes (Maroc/Tectra, villes non listées, accents
+  // ou casse différents). La géo est déjà cadrée en amont par les sources agrégées,
+  // et l'expiration/activité est gérée dans useJobs.
   const jobs = useMemo(
-    () =>
-      allJobs.filter(
-        (j) => j.is_active && (!j.location || WEST_AFRICA.some((c) => j.location.includes(c)))
-      ),
+    () => allJobs.filter((j) => j.is_active !== false),
     [allJobs]
   );
 

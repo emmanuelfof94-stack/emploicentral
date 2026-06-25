@@ -91,5 +91,16 @@ async def get_download_user(request: Request) -> UserResponse:
             )
         return UserResponse(id=user_id, email="", role="user")
 
-    token = await get_bearer_token(request)
+    # Repli : token via l'en-tête Authorization, sinon via `?token=`. On extrait à la
+    # main (ne PAS appeler get_bearer_token directement : son paramètre `credentials`
+    # ne serait pas injecté hors du système de dépendances FastAPI).
+    auth_header = request.headers.get("authorization") or ""
+    token = auth_header[7:].strip() if auth_header[:7].lower() == "bearer " else ""
+    if not token:
+        token = request.query_params.get("token") or ""
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials were not provided",
+        )
     return await get_current_user(token)
