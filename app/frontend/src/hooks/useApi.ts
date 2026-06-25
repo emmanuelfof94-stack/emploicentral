@@ -588,6 +588,33 @@ export function useAdminUserActivity(userId?: string, enabled = true) {
   });
 }
 
+// ---- Boucle emploi → compétences → formation ----
+export interface SkillGap {
+  missing: string[];
+  matched: string[];
+  theme: string;
+}
+
+export function useSkillGap(profileId?: number, jobId?: number, enabled = true) {
+  return useQuery({
+    queryKey: ['skill_gap', profileId, jobId],
+    enabled: enabled && !!profileId && !!jobId,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<SkillGap> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/jobs/skill-gap?profile_id=${profileId}&job_id=${jobId}`,
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return {
+        missing: body?.missing ?? [],
+        matched: body?.matched ?? [],
+        theme: body?.theme ?? '',
+      };
+    },
+  });
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

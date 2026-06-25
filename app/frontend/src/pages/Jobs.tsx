@@ -11,6 +11,7 @@ import {
   type UserJob,
 } from '../hooks/useApi';
 import CvTemplateGallery from '../components/CvTemplateGallery';
+import SkillGapBlock from '../components/SkillGapBlock';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -573,6 +574,11 @@ export default function Jobs() {
                     </div>
                   ) : (
                     <p className="text-sm text-slate-500 border-t pt-4">Calcul du score en cours…</p>
+                  )}
+
+                  {/* Boucle emploi → compétences → formation */}
+                  {profile?.cv_analyzed && profile?.id && selectedJob && (
+                    <SkillGapBlock profileId={profile.id} jobId={selectedJob.id} />
                   )}
 
                   {/* Génération de CV ATS + lettre de motivation adaptés à l'offre */}

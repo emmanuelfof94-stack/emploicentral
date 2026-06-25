@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Markdown from 'markdown-to-jsx';
 import Navbar from '../components/Navbar';
 import PartnerCard from '../components/PartnerCard';
@@ -165,7 +166,9 @@ export default function Trainings() {
   const { data: trainings, isLoading } = useMyTrainings();
   const { generate, remove } = useTrainingActions();
 
-  const [theme, setTheme] = useState('');
+  // Préremplissage depuis la boucle emploi→compétences (lien /trainings?theme=…).
+  const [searchParams] = useSearchParams();
+  const [theme, setTheme] = useState(searchParams.get('theme') ?? '');
   const [level, setLevel] = useState('');
   const [objective, setObjective] = useState('');
   const [submitting, setSubmitting] = useState(false);
