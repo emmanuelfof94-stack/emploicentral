@@ -7,7 +7,9 @@ import {
 } from '../hooks/useApi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,7 @@ import {
   GraduationCap,
   FileCheck2,
   Briefcase,
+  Download,
 } from 'lucide-react';
 
 function fmtDate(d?: string) {
@@ -176,21 +179,62 @@ export default function AdminUsers() {
   const [q, setQ] = useState('');
   const { data, isLoading } = useAdminUsers(q);
   const [selected, setSelected] = useState<AdminUserRow | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const users = data?.items ?? [];
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/v1/users/admin/export', {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'inscrits_emploicentral.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success('Export CSV téléchargé.');
+    } catch {
+      toast.error("L'export a échoué. Réessayez.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen app-surface">
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
-            Personnes inscrites {data ? `(${data.total})` : ''}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Les comptes réels de la plateforme. Cliquez sur une personne pour voir ce qu'elle a fait.
-          </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Users className="h-6 w-6 text-primary" />
+              Personnes inscrites {data ? `(${data.total})` : ''}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Les comptes réels de la plateforme. Cliquez sur une personne pour voir ce qu'elle a fait.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={exportCsv}
+            disabled={exporting || users.length === 0}
+            className="shrink-0"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Exporter CSV
+          </Button>
         </div>
 
         <div className="relative max-w-sm">

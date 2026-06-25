@@ -1,9 +1,11 @@
+import csv
+import io
 from datetime import datetime
 from typing import List, Optional
 
 from core.database import get_db
 from dependencies.auth import get_admin_user, get_current_user
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from models.auth import User
 from models.user_profiles import User_profiles
 from pydantic import BaseModel
@@ -91,6 +93,60 @@ async def admin_list_users(
         items.append(row)
 
     return AdminUsersResponse(total=total, items=items)
+
+
+@router.get("/admin/export")
+async def admin_export_users(
+    _admin: UserResponse = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export CSV de tous les comptes inscrits (enrichis du profil)."""
+    users = (await db.execute(
+        select(User).order_by(User.created_at.desc().nullslast())
+    )).scalars().all()
+
+    ids = [u.id for u in users]
+    profiles = {}
+    if ids:
+        rows = (await db.execute(
+            select(User_profiles).where(User_profiles.user_id.in_(ids))
+        )).scalars().all()
+        profiles = {p.user_id: p for p in rows}
+
+    buf = io.StringIO()
+    buf.write("﻿")  # BOM UTF-8 → accents corrects à l'ouverture dans Excel
+    # Séparateur ';' = compatible Excel en locale française.
+    writer = csv.writer(buf, delimiter=";")
+    writer.writerow([
+        "Nom", "Email", "Rôle", "Type de compte", "Inscription",
+        "Dernière connexion", "Téléphone", "Ville", "Secteur", "Métier", "CV analysé",
+    ])
+
+    def dt(value) -> str:
+        return value.strftime("%Y-%m-%d %H:%M") if value else ""
+
+    for u in users:
+        p = profiles.get(u.id)
+        name = (p.full_name if p and p.full_name else None) or u.name or ""
+        writer.writerow([
+            name,
+            u.email or (p.email if p else "") or "",
+            u.role or "",
+            "Email/mot de passe" if u.password_hash else "Plateforme",
+            dt(u.created_at),
+            dt(u.last_login),
+            (p.phone if p else "") or "",
+            (p.location if p else "") or "",
+            (p.sector if p else "") or "",
+            (p.job_title if p else "") or "",
+            "Oui" if (p and p.cv_analyzed) else "Non",
+        ])
+
+    return Response(
+        content=buf.getvalue().encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=inscrits_emploicentral.csv"},
+    )
 
 
 class AdminJobActivity(BaseModel):
