@@ -698,8 +698,9 @@ class CvGeneratorService:
 
     async def generate(self, profile: Dict[str, Any], job: Dict[str, Any]) -> Dict[str, Any]:
         """Construit le contenu du CV, enrichi par le CV uploadé (accroche IA si dispo)."""
-        # Enrichissement : lire et découper le CV PDF réellement uploadé.
-        cv_text = load_cv_text(profile.get("cv_object_key"))
+        # Enrichissement : le texte réel du CV. On privilégie la version PERSISTÉE en
+        # base (cv_text) — robuste face au stockage éphémère — sinon on relit le PDF disque.
+        cv_text = (profile.get("cv_text") or "").strip() or load_cv_text(profile.get("cv_object_key"))
         cv_sections = parse_cv_sections(cv_text) if cv_text else {}
 
         summary_override = None

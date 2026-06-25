@@ -140,12 +140,31 @@ async def analyze_cv(
     service = CvAnalysisService()
     try:
         result = await service.analyze_cv(data.pdf)
-        return AnalyzeCvResponse(**result)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"CV analysis error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"CV analysis failed: {str(e)}")
+
+    # Persiste le TEXTE BRUT du CV dans le profil de l'utilisateur. Indispensable sur
+    # l'hébergement gratuit (disque éphémère) : la génération de CV pourra ainsi
+    # toujours reprendre le contenu réel, même après redémarrage. Best-effort.
+    try:
+        from services import cv_heuristic
+
+        raw_text = cv_heuristic.decode_pdf_text(data.pdf)
+        if raw_text and raw_text.strip():
+            prof = (await db.execute(
+                select(User_profiles).where(User_profiles.user_id == str(current_user.id))
+            )).scalars().first()
+            if prof:
+                prof.cv_text = raw_text
+                await db.commit()
+    except Exception as exc:  # noqa: BLE001 - ne doit jamais bloquer l'analyse
+        logger.warning("Persistance du texte CV échouée: %s", exc)
+        await db.rollback()
+
+    return AnalyzeCvResponse(**result)
 
 
 @router.post("/compatibility-score", response_model=CompatibilityScoreResponse)
@@ -303,6 +322,54 @@ async def issue_download_token(current_user: UserResponse = Depends(get_current_
     return {"token": download_tokens.issue(str(current_user.id))}
 
 
+class SkillGapResponse(BaseModel):
+    """Compétences à acquérir (manquantes) et déjà acquises pour une offre."""
+    missing: List[str]
+    matched: List[str]
+    theme: str  # mots-clés manquants concaténés, prêts pour /trainings ou /suggest
+
+
+@router.get("/skill-gap", response_model=SkillGapResponse)
+async def skill_gap(
+    profile_id: int,
+    job_id: int,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Compétences que le candidat doit acquérir pour matcher une offre.
+
+    S'appuie sur le même moteur que la génération de CV (`match_profile_to_job`) :
+    on extrait les mots-clés de compétences de l'offre absents du profil. Le front
+    s'en sert pour proposer des formations (boucle emploi → compétences → formation).
+    """
+    from services.cv_generator import _split_skills, match_profile_to_job
+
+    profile = (await db.execute(
+        select(User_profiles).where(
+            User_profiles.id == profile_id,
+            User_profiles.user_id == str(current_user.id),
+        )
+    )).scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profil introuvable.")
+
+    job = (await db.execute(select(Job_offers).where(Job_offers.id == job_id))).scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Offre introuvable.")
+
+    job_data = {
+        "title": job.title,
+        "company": job.company,
+        "sector": job.sector,
+        "requirements": job.requirements,
+        "description": job.description,
+    }
+    match = match_profile_to_job(_split_skills(profile.skills), job_data)
+    missing = match["missing"][:8]
+    matched = match["matched"][:12]
+    return SkillGapResponse(missing=missing, matched=matched, theme=" ".join(missing))
+
+
 @router.get("/generate-cv")
 async def generate_cv_get(
     profile_id: int,
@@ -358,6 +425,7 @@ async def generate_cv(
         "location": profile.location,
         "profile_summary": profile.profile_summary,
         "cv_object_key": profile.cv_object_key,
+        "cv_text": profile.cv_text,
     }
     job_data = {
         "title": job.title,

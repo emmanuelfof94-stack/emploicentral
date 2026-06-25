@@ -1,6 +1,6 @@
 from core.database import Base
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
 
 class User_profiles(Base):
@@ -21,5 +21,8 @@ class User_profiles(Base):
     cv_object_key = Column(String, nullable=True)
     cv_analyzed = Column(Boolean, default=False, nullable=True)
     profile_summary = Column(String, nullable=True)
+    # Texte brut du CV uploadé, persisté en base (le fichier sur disque est éphémère
+    # sur l'hébergement gratuit). Sert à la génération de CV pour garder le contenu réel.
+    cv_text = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now)
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
