@@ -8,7 +8,7 @@ class LocalRegisterRequest(BaseModel):
     """Request body for local email/password registration."""
 
     email: EmailStr
-    password: str = Field(min_length=6, max_length=128)
+    password: str = Field(min_length=8, max_length=128)
     name: Optional[str] = None
 
 
@@ -17,13 +17,27 @@ class LocalLoginRequest(BaseModel):
 
     email: EmailStr
     password: str
+    remember: bool = False  # « rester connecté » → jeton longue durée
 
 
 class ChangePasswordRequest(BaseModel):
     """Request body for changing the password of the current local account."""
 
     current_password: str
-    new_password: str = Field(min_length=6, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request body for requesting a password-reset email."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request body for resetting a password from a reset token."""
+
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class LocalAuthResponse(BaseModel):

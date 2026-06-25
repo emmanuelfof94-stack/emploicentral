@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Target, Loader2 } from 'lucide-react';
+import { Target, Loader2, Eye, EyeOff } from 'lucide-react';
 
 type Mode = 'login' | 'register';
 
@@ -18,6 +18,8 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Already authenticated → go to dashboard
@@ -38,7 +40,7 @@ export default function Login() {
       const body =
         mode === 'register'
           ? { email, password, name: name || undefined }
-          : { email, password };
+          : { email, password, remember };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -142,19 +144,51 @@ export default function Login() {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={mode === 'register' ? '6 caractères minimum' : '••••••••'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={mode === 'register' ? 6 : undefined}
-                  autoComplete={
-                    mode === 'register' ? 'new-password' : 'current-password'
-                  }
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder={mode === 'register' ? '8 caractères minimum' : '••••••••'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={mode === 'register' ? 8 : undefined}
+                    autoComplete={
+                      mode === 'register' ? 'new-password' : 'current-password'
+                    }
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
+
+              {mode === 'login' && (
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 text-slate-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    Rester connecté
+                  </label>
+                  <Link
+                    to="/reset-password"
+                    className="text-blue-600 font-medium hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+              )}
 
               <Button
                 type="submit"

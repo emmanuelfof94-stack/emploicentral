@@ -70,3 +70,26 @@ async def get_admin_user(current_user: UserResponse = Depends(get_current_user))
     if current_user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+async def get_download_user(request: Request) -> UserResponse:
+    """Auth pour les téléchargements de fichiers via navigation directe (Android).
+
+    Priorité au jeton de téléchargement à usage unique `?dl=...` (ne met pas le JWT
+    dans l'URL) ; à défaut, on retombe sur l'authentification standard (en-tête
+    Authorization ou `?token=`). Le jeton `dl` est consommé (usage unique).
+    """
+    from services import download_tokens
+
+    dl = request.query_params.get("dl")
+    if dl:
+        user_id = download_tokens.consume(dl)
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Lien de téléchargement invalide ou expiré",
+            )
+        return UserResponse(id=user_id, email="", role="user")
+
+    token = await get_bearer_token(request)
+    return await get_current_user(token)

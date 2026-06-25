@@ -12,16 +12,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from dependencies.auth import get_current_user
+from dependencies.auth import get_current_user, get_download_user
 from models.job_offers import Job_offers
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
 from services.cv_analysis import CvAnalysisService
-from services.cv_generator import CvGeneratorService, build_pdf, build_cover_letter_pdf
+from services.cv_generator import (
+    CV_TEMPLATE_META,
+    CvGeneratorService,
+    build_pdf,
+    build_cover_letter_pdf,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["cv_analysis"])
+
+
+@router.get("/cv-templates")
+async def list_cv_templates(_user: UserResponse = Depends(get_current_user)):
+    """Modèles de CV disponibles (tous gratuits, ATS-safe) pour la galerie de l'UI."""
+    return {"templates": CV_TEMPLATE_META}
 
 
 # ---------- Pydantic Schemas ----------
@@ -281,12 +292,23 @@ async def batch_scores(
         raise HTTPException(status_code=500, detail=f"Batch scoring failed: {str(e)}")
 
 
+@router.post("/download-token")
+async def issue_download_token(current_user: UserResponse = Depends(get_current_user)):
+    """Émet un jeton de téléchargement à usage unique (courte durée) pour le user courant.
+
+    Utilisé par le frontend mobile : on ouvre ensuite l'URL GET du PDF avec `?dl=<jeton>`,
+    ce qui évite d'exposer le JWT longue durée dans l'URL/les logs."""
+    from services import download_tokens
+
+    return {"token": download_tokens.issue(str(current_user.id))}
+
+
 @router.get("/generate-cv")
 async def generate_cv_get(
     profile_id: int,
     job_id: int,
     template: Optional[str] = "sobre",
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_download_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Variante GET (navigation directe) — voir `generate_cv`. Permet le téléchargement
@@ -375,7 +397,7 @@ async def generate_cover_letter_get(
     profile_id: int,
     job_id: int,
     template: Optional[str] = "sobre",
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_download_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Variante GET (navigation directe) — voir `generate_cover_letter`. Permet le

@@ -496,6 +496,30 @@ export function useAdminCourseActions() {
   return { create, update, remove };
 }
 
+// ---- Modèles de CV (galerie de styles ATS-safe) ----
+export interface CvTemplateMeta {
+  key: string;
+  label: string;
+  description: string;
+  accent: string;
+  rule: string;
+  serif: boolean;
+  compact: boolean;
+}
+
+export function useCvTemplates(enabled = true) {
+  return useQuery({
+    queryKey: ['cv_templates'],
+    enabled,
+    staleTime: 60 * 60_000,
+    queryFn: async (): Promise<CvTemplateMeta[]> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/jobs/cv-templates', method: 'GET' });
+      const body = res?.data ?? res;
+      return (body?.templates ?? []) as CvTemplateMeta[];
+    },
+  });
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

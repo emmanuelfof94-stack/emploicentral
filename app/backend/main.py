@@ -98,9 +98,27 @@ app = FastAPI(
 
 
 # MODULE_MIDDLEWARE_START
+# CORS restreint : on n'autorise que le domaine de l'app (FRONTEND_URL) et le dev
+# local, au lieu de réfléchir n'importe quelle origine. Le front étant servi par ce
+# même backend, les appels sont surtout same-origin ; ceci ferme la porte aux sites tiers.
+def _build_cors_origin_regex() -> str:
+    import re as _re
+
+    patterns = [
+        r"http://localhost(:\d+)?",
+        r"http://127\.0\.0\.1(:\d+)?",
+    ]
+    frontend = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
+    if frontend:
+        patterns.append(_re.escape(frontend))
+    # Tout sous-domaine *.fly.dev de cette app (preview / déploiements).
+    patterns.append(r"https://[a-z0-9-]+\.fly\.dev")
+    return r"^(" + "|".join(patterns) + r")$"
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r".*",
+    allow_origin_regex=_build_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

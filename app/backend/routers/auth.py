@@ -22,17 +22,31 @@ from fastapi.responses import RedirectResponse
 from models.auth import User
 from schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LocalAuthResponse,
     LocalLoginRequest,
     LocalRegisterRequest,
     PlatformTokenExchangeRequest,
+    ResetPasswordRequest,
     TokenExchangeResponse,
     UserResponse,
 )
+from services import rate_limit
 from services.auth import AuthService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
+
+
+def _client_ip(request: Request) -> str:
+    """Adresse IP du client, en tenant compte du proxy Fly (Fly-Client-IP / XFF)."""
+    fly_ip = request.headers.get("fly-client-ip")
+    if fly_ip:
+        return fly_ip.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 logger = logging.getLogger(__name__)
 
 
@@ -328,15 +342,90 @@ async def register_local(payload: LocalRegisterRequest, db: AsyncSession = Depen
 
 
 @router.post("/login", response_model=LocalAuthResponse)
-async def login_local(payload: LocalLoginRequest, db: AsyncSession = Depends(get_db)):
-    """Authenticate with email/password and return an app token."""
+async def login_local(payload: LocalLoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Authenticate with email/password and return an app token.
+
+    Protégé contre la force brute : après plusieurs échecs (par IP+email et par IP),
+    les tentatives sont temporairement bloquées (429).
+    """
+    ip = _client_ip(request)
+    email_key = f"login:{ip}:{(payload.email or '').strip().lower()}"
+    ip_key = f"login-ip:{ip}"
+
+    for key in (email_key, ip_key):
+        blocked, retry_after = rate_limit.too_many_attempts(key)
+        if blocked:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Trop de tentatives. Réessayez dans quelques minutes.",
+                headers={"Retry-After": str(retry_after)},
+            )
+
     auth_service = AuthService(db)
     user = await auth_service.authenticate_local_user(email=payload.email, password=payload.password)
     if not user:
+        rate_limit.record_failure(email_key)
+        rate_limit.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou mot de passe incorrect")
 
-    app_token, expires_at, _ = await auth_service.issue_app_token(user=user)
+    # Connexion réussie → on efface le compteur d'échecs pour ce couple IP+email.
+    rate_limit.reset(email_key)
+
+    app_token, expires_at, _ = await auth_service.issue_app_token(user=user, remember=payload.remember)
     return LocalAuthResponse(token=app_token, expires_at=int(expires_at.timestamp()))
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Envoie un email de réinitialisation si un compte local existe.
+
+    Réponse toujours générique (200) pour ne pas révéler si l'email est inscrit.
+    Rate-limité par IP pour éviter l'abus.
+    """
+    ip = _client_ip(request)
+    blocked, retry_after = rate_limit.too_many_attempts(f"forgot:{ip}")
+    if blocked:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Trop de demandes. Réessayez dans quelques minutes.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    rate_limit.record_failure(f"forgot:{ip}")
+
+    auth_service = AuthService(db)
+    result = await auth_service.create_password_reset(email=payload.email)
+    if result:
+        raw_token, user = result
+        reset_url = f"{settings.frontend_url.rstrip('/')}/reset-password?token={raw_token}"
+        try:
+            from services.notifications import email_available, send_email
+
+            if email_available():
+                html = (
+                    "<p>Bonjour,</p>"
+                    "<p>Vous avez demandé à réinitialiser votre mot de passe EmploiCentral. "
+                    f'Cliquez sur ce lien (valable 1 heure) : <a href="{reset_url}">{reset_url}</a></p>'
+                    "<p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>"
+                )
+                await send_email(user.email, "Réinitialisation de votre mot de passe", html)
+            else:
+                # Pas de SMTP configuré : on trace le lien pour permettre un dépannage manuel.
+                logger.warning("[forgot_password] SMTP non configuré, lien de reset (manuel): %s", reset_url)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[forgot_password] Échec d'envoi de l'email de reset: %s", exc)
+
+    return {"ok": True, "message": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."}
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Réinitialise le mot de passe à partir d'un jeton reçu par email."""
+    auth_service = AuthService(db)
+    try:
+        await auth_service.reset_password(raw_token=payload.token, new_password=payload.new_password)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return {"ok": True}
 
 
 @router.post("/change-password")

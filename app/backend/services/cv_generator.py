@@ -281,8 +281,45 @@ TEMPLATES = {
     # sous-titre et dates (palette Carlito #1f4e79 / #595959, police Carlito).
     "mon_cv": {"accent": "#1f4e79", "name": "#1f4e79", "rule": "#1f4e79", "scale": 1.0,
                "subtitle": "#595959", "date": "#595959", "font": "Carlito"},
+    # --- Modèles gratuits supplémentaires (tous mono-colonne = ATS-safe) ---------
+    # "classique" : police à empattements (Times, intégrée à ReportLab) → look
+    # traditionnel et élégant, toujours lisible par les ATS.
+    "classique": {"accent": "#1a1a1a", "name": "#111111", "rule": "#cccccc", "scale": 1.0,
+                  "subtitle": "#444444", "font": "Times"},
+    "emeraude": {"accent": "#047857", "name": "#065f46", "rule": "#a7f3d0", "scale": 1.0,
+                 "subtitle": "#475569", "date": "#64748b"},
+    "bordeaux": {"accent": "#9f1239", "name": "#881337", "rule": "#fecdd3", "scale": 1.0,
+                 "subtitle": "#475569", "date": "#64748b"},
+    "ardoise": {"accent": "#334155", "name": "#1e293b", "rule": "#cbd5e1", "scale": 1.0,
+                "subtitle": "#475569", "date": "#64748b"},
+    "turquoise": {"accent": "#0d9488", "name": "#0f766e", "rule": "#99f6e4", "scale": 1.0,
+                  "subtitle": "#475569", "date": "#64748b"},
 }
 DEFAULT_TEMPLATE = "sobre"
+
+# Métadonnées exposées à l'UI (galerie de vignettes). `serif`/`compact` aident le
+# front à dessiner un aperçu fidèle ; `accent`/`rule` reprennent les couleurs du PDF.
+# Tous ces modèles sont ATS-safe (mono-colonne, sans photo ni colonne latérale).
+CV_TEMPLATE_META = [
+    {"key": "mon_cv", "label": "Bleu nuit", "description": "Élégant, bleu nuit — recommandé",
+     "accent": "#1f4e79", "rule": "#1f4e79", "serif": False, "compact": False},
+    {"key": "sobre", "label": "Sobre", "description": "ATS classique, noir et gris",
+     "accent": "#111111", "rule": "#cccccc", "serif": False, "compact": False},
+    {"key": "classique", "label": "Classique", "description": "Police à empattements, traditionnel",
+     "accent": "#111111", "rule": "#cccccc", "serif": True, "compact": False},
+    {"key": "bleu", "label": "Bleu", "description": "Accent bleu vif",
+     "accent": "#1d4ed8", "rule": "#bfdbfe", "serif": False, "compact": False},
+    {"key": "emeraude", "label": "Émeraude", "description": "Accent vert, moderne",
+     "accent": "#047857", "rule": "#a7f3d0", "serif": False, "compact": False},
+    {"key": "turquoise", "label": "Turquoise", "description": "Accent turquoise, frais",
+     "accent": "#0d9488", "rule": "#99f6e4", "serif": False, "compact": False},
+    {"key": "bordeaux", "label": "Bordeaux", "description": "Accent bordeaux, sobre et chic",
+     "accent": "#9f1239", "rule": "#fecdd3", "serif": False, "compact": False},
+    {"key": "ardoise", "label": "Ardoise", "description": "Gris ardoise, professionnel",
+     "accent": "#334155", "rule": "#cbd5e1", "serif": False, "compact": False},
+    {"key": "compact", "label": "Compact", "description": "Plus dense, gagne de la place",
+     "accent": "#111111", "rule": "#cccccc", "serif": False, "compact": True},
+]
 
 _FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 _CARLITO_REGISTERED: Optional[bool] = None
@@ -321,6 +358,9 @@ def _fonts(tpl: Dict[str, Any]) -> Dict[str, str]:
     """Jeu de polices (regular/bold/italic) du modèle, avec repli Helvetica."""
     if tpl.get("font") == "Carlito" and _register_carlito():
         return {"regular": "Carlito", "bold": "Carlito-Bold", "italic": "Carlito-Italic"}
+    if tpl.get("font") == "Times":
+        # Famille à empattements intégrée à ReportLab (aucun enregistrement requis).
+        return {"regular": "Times-Roman", "bold": "Times-Bold", "italic": "Times-Italic"}
     return {"regular": "Helvetica", "bold": "Helvetica-Bold", "italic": "Helvetica-Oblique"}
 
 

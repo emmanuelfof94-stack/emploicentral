@@ -6,9 +6,11 @@ import {
   useBatchScores,
   useUserJobs,
   useUserJobActions,
+  useCvTemplates,
   type Job,
   type UserJob,
 } from '../hooks/useApi';
+import CvTemplateGallery from '../components/CvTemplateGallery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,10 +25,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette } from 'lucide-react';
 
 interface ScoreItem {
   job_id: number;
@@ -104,6 +107,9 @@ export default function Jobs() {
   const [generatingCv, setGeneratingCv] = useState(false);
   const [generatingLetter, setGeneratingLetter] = useState(false);
   const [cvTemplate, setCvTemplate] = useState('mon_cv');
+  const [tplOpen, setTplOpen] = useState(false);
+  const { data: cvTemplates } = useCvTemplates();
+  const currentTpl = cvTemplates?.find((t) => t.key === cvTemplate);
 
   // Télécharge un PDF depuis un endpoint authentifié (fetch direct = gestion du binaire ;
   // le web-sdk lit le JWT dans localStorage).
@@ -116,13 +122,30 @@ export default function Jobs() {
     // d'en-tête Authorization. window.open reste dans le geste utilisateur (pas d'await avant).
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     if (isMobile) {
-      const params = new URLSearchParams({
-        profile_id: String(profile?.id ?? ''),
-        job_id: String(job.id),
-        template: cvTemplate,
-        ...(token ? { token } : {}),
-      });
-      window.open(`${endpoint}?${params.toString()}`, '_blank');
+      // On ouvre l'onglet TOUT DE SUITE (dans le geste utilisateur) pour ne pas être
+      // bloqué comme popup, puis on récupère un jeton de téléchargement à usage unique
+      // (le JWT ne transite donc pas dans l'URL) avant d'y charger le PDF.
+      const win = window.open('', '_blank');
+      try {
+        const tokRes = await fetch('/api/v1/jobs/download-token', {
+          method: 'POST',
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
+        const { token: dl } = await tokRes.json();
+        const params = new URLSearchParams({
+          profile_id: String(profile?.id ?? ''),
+          job_id: String(job.id),
+          template: cvTemplate,
+          dl,
+        });
+        const url = `${endpoint}?${params.toString()}`;
+        if (win) win.location.href = url;
+        else window.location.href = url;
+      } catch (e) {
+        if (win) win.close();
+        throw e;
+      }
       return;
     }
     const res = await fetch(endpoint, {
@@ -560,19 +583,32 @@ export default function Jobs() {
                   {/* Génération de CV ATS + lettre de motivation adaptés à l'offre */}
                   {profile?.cv_analyzed && profile?.id ? (
                     <div className="border-t pt-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 whitespace-nowrap">Modèle :</span>
-                        <Select value={cvTemplate} onValueChange={setCvTemplate}>
-                          <SelectTrigger className="h-8 text-xs bg-white w-44">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="mon_cv">Comme mon CV (bleu nuit)</SelectItem>
-                            <SelectItem value="sobre">Sobre (ATS classique)</SelectItem>
-                            <SelectItem value="bleu">Bleu</SelectItem>
-                            <SelectItem value="compact">Compact</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-slate-500 whitespace-nowrap">Modèle de CV :</span>
+                        <Dialog open={tplOpen} onOpenChange={setTplOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 text-xs bg-white">
+                              <span
+                                className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0"
+                                style={{ backgroundColor: currentTpl?.accent || '#1f4e79' }}
+                              />
+                              {currentTpl?.label || 'Choisir'}
+                              <Palette className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Choisir un modèle de CV</DialogTitle>
+                            </DialogHeader>
+                            <CvTemplateGallery
+                              value={cvTemplate}
+                              onChange={(key) => {
+                                setCvTemplate(key);
+                                setTplOpen(false);
+                              }}
+                            />
+                          </DialogContent>
+                        </Dialog>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-2">
                         <Button

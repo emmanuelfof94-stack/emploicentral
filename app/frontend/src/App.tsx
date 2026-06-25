@@ -8,6 +8,7 @@ import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import Index from './pages/Index';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Jobs from './pages/Jobs';
 import Applications from './pages/Applications';
@@ -37,6 +38,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<Login />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
     <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />

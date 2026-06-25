@@ -256,6 +256,41 @@ def _generate_local(theme: str, level: str, objective: str) -> str:
     return "\n".join(lines)
 
 
+# Packs de formation « maison » mis en avant (dossiers Drive partagés). Affichés
+# EN PLUS du parcours quand la thématique correspond. ⚠️ Chaque dossier doit être
+# partagé en « Tout utilisateur disposant du lien » pour être accessible aux candidats.
+FEATURED_PACKS = [
+    {
+        "title": "Pack Data Analyst",
+        "url": "https://drive.google.com/drive/folders/1oPP1M7MNkHgg10ChU-NS18T8JX1QcbFM",
+        "desc": "Pack complet Data Analyst (Excel, Power BI, SQL…) — supports et exercices fournis",
+        "keywords": [
+            "data", "données", "donnees", "analyst", "analyse de données", "analyse de donnees",
+            "excel", "power bi", "powerbi", "sql", "business intelligence", "tableau de bord",
+        ],
+    },
+]
+
+
+def _matching_packs(theme: str) -> List[Dict[str, str]]:
+    low = (theme or "").lower()
+    out = []
+    for p in FEATURED_PACKS:
+        if any(re.search(r"\b" + re.escape(k), low) for k in p["keywords"]):
+            out.append(p)
+    return out
+
+
+def _packs_markdown(theme: str) -> str:
+    packs = _matching_packs(theme)
+    if not packs:
+        return ""
+    lines = ["\n## 📦 Formation recommandée par EmploiCentral"]
+    for p in packs:
+        lines.append(f"- [{p['title']}]({p['url']}) — {p['desc']}")
+    return "\n".join(lines)
+
+
 async def generate_program(
     theme: str,
     level: str = "",
@@ -266,10 +301,18 @@ async def generate_program(
     theme = (theme or "").strip()
     if not theme:
         raise ValueError("Thématique requise.")
+    ai_generated = False
+    program = None
     if ai_available():
         try:
             program = await _generate_ai(theme, level, objective, profile_summary)
-            return {"program": program, "ai_generated": True}
+            ai_generated = True
         except Exception as exc:  # noqa: BLE001 - dégradation gracieuse
             logger.warning("Génération IA du parcours échouée (%s); repli local", exc)
-    return {"program": _generate_local(theme, level, objective), "ai_generated": False}
+    if program is None:
+        program = _generate_local(theme, level, objective)
+    # Ajoute les packs maison pertinents (Drive) après le parcours, IA ou local.
+    packs = _packs_markdown(theme)
+    if packs:
+        program = program.rstrip() + "\n\n" + packs
+    return {"program": program, "ai_generated": ai_generated}

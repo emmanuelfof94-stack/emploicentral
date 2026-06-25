@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 from core.auth import create_access_token
 from core.config import settings
 from core.database import db_manager
-from models.auth import OIDCState, User
+from models.auth import OIDCState, PasswordResetToken, User
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,33 @@ def _is_admin_email(email: str) -> bool:
     """True si l'email correspond à ADMIN_USER_EMAIL (compte propriétaire)."""
     admin_email = (getattr(settings, "admin_user_email", "") or "").strip().lower()
     return bool(admin_email) and (email or "").strip().lower() == admin_email
+
+
+# ---- Politique de mot de passe ----
+PASSWORD_MIN_LENGTH = max(8, int(os.environ.get("PASSWORD_MIN_LENGTH", 8)))
+
+# Petite liste de mots de passe trop courants (FR + EN) à refuser d'emblée.
+_COMMON_PASSWORDS = {
+    "password", "motdepasse", "azerty", "azertyuiop", "qwerty", "qwertyuiop",
+    "123456", "1234567", "12345678", "123456789", "1234567890", "000000",
+    "111111", "abc123", "azerty123", "password1", "passw0rd", "motdepasse1",
+    "iloveyou", "admin", "administrateur", "bonjour", "soleil", "loulou",
+    "doudou", "chouchou", "12345", "00000000", "11111111", "aaaaaaaa",
+}
+
+
+def validate_password_strength(password: str, email: Optional[str] = None) -> None:
+    """Valide la robustesse d'un mot de passe. Lève ValueError (→ 400) si trop faible."""
+    pwd = password or ""
+    if len(pwd) < PASSWORD_MIN_LENGTH:
+        raise ValueError(f"Le mot de passe doit contenir au moins {PASSWORD_MIN_LENGTH} caractères")
+    low = pwd.strip().lower()
+    if low in _COMMON_PASSWORDS:
+        raise ValueError("Ce mot de passe est trop courant, choisissez-en un autre")
+    if email:
+        local = email.split("@", 1)[0].strip().lower()
+        if low == email.strip().lower() or (len(local) >= 3 and low == local):
+            raise ValueError("Le mot de passe ne doit pas être identique à votre email")
 
 
 # ---- Local password hashing (stdlib PBKDF2-HMAC-SHA256) ----
@@ -90,6 +117,7 @@ class AuthService:
     async def register_local_user(self, email: str, password: str, name: Optional[str] = None) -> User:
         """Create a new local (email/password) user. Raises ValueError if email already exists."""
         normalized_email = email.strip().lower()
+        validate_password_strength(password, normalized_email)
         existing = await self.get_user_by_email(normalized_email)
         if existing:
             raise ValueError("Un compte existe déjà avec cet email")
@@ -135,6 +163,7 @@ class AuthService:
             raise ValueError("Ce compte n'a pas de mot de passe local")
         if not verify_password(current_password, user.password_hash):
             raise ValueError("Mot de passe actuel incorrect")
+        validate_password_strength(new_password, user.email)
         if verify_password(new_password, user.password_hash):
             raise ValueError("Le nouveau mot de passe doit être différent de l'ancien")
         uid = user.id  # capturé avant commit (l'attribut ORM expire après)
@@ -142,16 +171,79 @@ class AuthService:
         await self.db.commit()
         logger.info("[change_password] Password updated for user %s", uid)
 
+    async def create_password_reset(self, email: str) -> Optional[Tuple[str, "User"]]:
+        """Crée un jeton de réinitialisation pour un compte LOCAL existant.
+
+        Retourne (jeton_brut, user) si un compte local existe pour cet email, sinon
+        None (le routeur répond malgré tout 200 pour ne pas révéler l'existence du
+        compte). Le jeton brut n'est connu qu'ici : seul son hash est stocké.
+        """
+        user = await self.get_user_by_email(email)
+        if not user or not user.password_hash:
+            return None  # compte inexistant ou sans mot de passe local (OIDC)
+
+        # Purge des jetons expirés.
+        await self.db.execute(
+            delete(PasswordResetToken).where(PasswordResetToken.expires_at < datetime.now(timezone.utc))
+        )
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        try:
+            ttl = int(os.environ.get("PASSWORD_RESET_TTL_MINUTES", 60))
+        except (TypeError, ValueError):
+            ttl = 60
+        row = PasswordResetToken(
+            token_hash=token_hash,
+            user_id=user.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=ttl),
+            used=0,
+        )
+        self.db.add(row)
+        await self.db.commit()
+        logger.info("[create_password_reset] Reset token issued for user %s", user.id)
+        return raw_token, user
+
+    async def reset_password(self, raw_token: str, new_password: str) -> None:
+        """Réinitialise le mot de passe à partir d'un jeton. Lève ValueError si invalide."""
+        token_hash = hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+        result = await self.db.execute(
+            select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+        )
+        row = result.scalar_one_or_none()
+        if not row or row.used or row.expires_at < datetime.now(timezone.utc):
+            raise ValueError("Lien de réinitialisation invalide ou expiré")
+
+        user_result = await self.db.execute(select(User).where(User.id == row.user_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise ValueError("Compte introuvable")
+        validate_password_strength(new_password, user.email)
+        user.password_hash = hash_password(new_password)
+        row.used = 1
+        await self.db.commit()
+        logger.info("[reset_password] Password reset for user %s", row.user_id)
+
     async def issue_app_token(
         self,
         user: User,
+        remember: bool = False,
     ) -> Tuple[str, datetime, Dict[str, Any]]:
-        """Generate application JWT token for the authenticated user."""
-        try:
-            expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
-        except (TypeError, ValueError):
-            logger.warning("Invalid JWT_EXPIRE_MINUTES value; fallback to 60 minutes")
-            expires_minutes = 60
+        """Generate application JWT token for the authenticated user.
+
+        `remember=True` émet un jeton longue durée (« rester connecté »), sinon la
+        durée par défaut (JWT_EXPIRE_MINUTES).
+        """
+        if remember:
+            try:
+                expires_minutes = int(os.environ.get("REMEMBER_ME_MINUTES", 43200))  # 30 jours
+            except (TypeError, ValueError):
+                expires_minutes = 43200
+        else:
+            try:
+                expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
+            except (TypeError, ValueError):
+                logger.warning("Invalid JWT_EXPIRE_MINUTES value; fallback to 60 minutes")
+                expires_minutes = 60
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
 
         claims: Dict[str, Any] = {
