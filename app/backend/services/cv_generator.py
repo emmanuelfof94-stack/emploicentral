@@ -294,6 +294,19 @@ TEMPLATES = {
                 "subtitle": "#475569", "date": "#64748b"},
     "turquoise": {"accent": "#0d9488", "name": "#0f766e", "rule": "#99f6e4", "scale": 1.0,
                   "subtitle": "#475569", "date": "#64748b"},
+    # Palettes inspirées des modèles Canva (mise en page mono-colonne ATS conservée).
+    "ambre": {"accent": "#ea580c", "name": "#c2410b", "rule": "#fed7aa", "scale": 1.0,
+              "subtitle": "#475569", "date": "#64748b"},
+    "violet": {"accent": "#7c3aed", "name": "#6d28d9", "rule": "#ddd6fe", "scale": 1.0,
+               "subtitle": "#475569", "date": "#64748b"},
+    "indigo": {"accent": "#4f46e5", "name": "#4338ca", "rule": "#c7d2fe", "scale": 1.0,
+               "subtitle": "#475569", "date": "#64748b"},
+    "rose": {"accent": "#db2777", "name": "#be185d", "rule": "#fbcfe8", "scale": 1.0,
+             "subtitle": "#475569", "date": "#64748b"},
+    "moka": {"accent": "#92400e", "name": "#78350f", "rule": "#e7d5c0", "scale": 1.0,
+             "subtitle": "#475569", "date": "#64748b"},
+    "olive": {"accent": "#4d7c0f", "name": "#3f6212", "rule": "#d9f99d", "scale": 1.0,
+              "subtitle": "#475569", "date": "#64748b"},
 }
 DEFAULT_TEMPLATE = "sobre"
 
@@ -317,6 +330,18 @@ CV_TEMPLATE_META = [
      "accent": "#9f1239", "rule": "#fecdd3", "serif": False, "compact": False},
     {"key": "ardoise", "label": "Ardoise", "description": "Gris ardoise, professionnel",
      "accent": "#334155", "rule": "#cbd5e1", "serif": False, "compact": False},
+    {"key": "ambre", "label": "Ambre", "description": "Accent orange, chaleureux",
+     "accent": "#ea580c", "rule": "#fed7aa", "serif": False, "compact": False},
+    {"key": "violet", "label": "Violet", "description": "Accent violet, créatif",
+     "accent": "#7c3aed", "rule": "#ddd6fe", "serif": False, "compact": False},
+    {"key": "indigo", "label": "Indigo", "description": "Bleu indigo, moderne",
+     "accent": "#4f46e5", "rule": "#c7d2fe", "serif": False, "compact": False},
+    {"key": "rose", "label": "Rose", "description": "Accent rose, élégant",
+     "accent": "#db2777", "rule": "#fbcfe8", "serif": False, "compact": False},
+    {"key": "moka", "label": "Moka", "description": "Brun moka, sobre et chic",
+     "accent": "#92400e", "rule": "#e7d5c0", "serif": False, "compact": False},
+    {"key": "olive", "label": "Olive", "description": "Vert olive, naturel",
+     "accent": "#4d7c0f", "rule": "#d9f99d", "serif": False, "compact": False},
     {"key": "compact", "label": "Compact", "description": "Plus dense, gagne de la place",
      "accent": "#111111", "rule": "#cccccc", "serif": False, "compact": True},
 ]
