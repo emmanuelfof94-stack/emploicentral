@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formation — Gestion de projet (Niveau intermédiaire)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#1F6F78; --primary-light:#2e9aa6; --secondary:#134e54;
+    --success:#059669; --danger:#dc2626; --warning:#c2410c; --info:#0369a1;
+    --bg:#ffffff; --card:#ffffff; --card-border:#dde5e6;
+    --text:#1B2733; --text-muted:#5b6b7b; --radius:16px; --shadow:0 6px 22px rgba(15,40,45,0.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',sans-serif;background:#ffffff;color:var(--text);line-height:1.65;min-height:100vh}
+  ::selection{background:rgba(31,111,120,0.18)}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 96px}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;margin-bottom:24px}
+  h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;line-height:1.2;
+    background:linear-gradient(135deg,#1F6F78,#134e54);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  h2{font-size:1.5rem;font-weight:700;margin:6px 0 14px;display:flex;align-items:center;gap:10px;color:var(--text)}
+  h3{font-size:1.15rem;font-weight:600;color:var(--primary);margin:22px 0 10px}
+  h4{font-size:1rem;font-weight:600;margin:14px 0 6px;color:var(--text)}
+  p{margin-bottom:10px;color:var(--text)}
+  ul,ol{margin:8px 0 12px 22px}
+  li{margin-bottom:6px;color:var(--text)}
+  strong{color:#0f2027;font-weight:600}
+  a{color:var(--primary)}
+  .muted{color:var(--text-muted)}
+  .badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+  .badge.soft{background:rgba(31,111,120,0.10);color:var(--primary);border:1px solid rgba(31,111,120,0.28)}
+  .hero{text-align:center;padding:40px 28px}
+  .hero p{max-width:700px;margin:14px auto 0;color:var(--text-muted)}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+  .progress-wrap{margin-top:22px}
+  .bar{height:12px;border-radius:999px;background:#e3eaeb;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--primary),var(--success));transition:width .5s ease}
+  nav.modnav{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px;padding:12px;margin:0 -4px 24px;border-radius:14px;
+    background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border:1px solid var(--card-border);box-shadow:0 4px 14px rgba(15,40,45,0.05)}
+  nav.modnav button{flex:1 1 auto;min-width:120px;cursor:pointer;border:1px solid transparent;background:#eef3f3;color:var(--text-muted);
+    padding:10px 12px;border-radius:10px;font-family:inherit;font-weight:600;font-size:.85rem;transition:.2s}
+  nav.modnav button:hover{color:var(--primary);background:rgba(31,111,120,.10)}
+  nav.modnav button.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));border-color:transparent}
+  .module{display:none;animation:fade .35s ease}
+  .module.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#eef3f3;border:1px solid var(--card-border);color:var(--text-muted)}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:14px 0}
+  .tile{background:#f7fafa;border:1px solid var(--card-border);border-radius:12px;padding:16px}
+  .tile h4{margin-top:0;color:var(--primary)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--card-border);vertical-align:top}
+  th{color:var(--text);background:rgba(31,111,120,.10);font-weight:600}
+  td{color:var(--text)}
+  .callout{border-left:4px solid var(--info);background:rgba(3,105,161,.07);padding:14px 16px;border-radius:0 12px 12px 0;margin:14px 0}
+  .callout.warn{border-color:var(--warning);background:rgba(194,65,12,.07)}
+  .callout.ok{border-color:var(--success);background:rgba(5,150,105,.08)}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:4px}
+  .ex{border:1px solid var(--card-border);border-radius:12px;margin:14px 0;overflow:hidden;background:#fafcfc}
+  .ex .q{padding:16px 18px}
+  .ex .q .tag{font-size:.72rem;font-weight:700;color:var(--warning);letter-spacing:.5px;text-transform:uppercase}
+  .ex .toggle{cursor:pointer;width:100%;text-align:left;border:none;font-family:inherit;background:rgba(5,150,105,.10);color:var(--success);
+    font-weight:600;padding:12px 18px;font-size:.9rem;display:flex;justify-content:space-between;align-items:center}
+  .ex .toggle:hover{background:rgba(5,150,105,.18)}
+  .ex .answer{display:none;padding:16px 18px;border-top:1px solid var(--card-border);background:rgba(5,150,105,.05)}
+  .ex .answer.show{display:block}
+  .check{display:flex;align-items:flex-start;gap:10px;margin:8px 0;cursor:pointer;user-select:none}
+  .check input{margin-top:5px;width:16px;height:16px;accent-color:var(--success);flex:none}
+  .quiz .opt{display:block;cursor:pointer;padding:11px 14px;border:1px solid var(--card-border);border-radius:10px;margin:8px 0;background:#fafcfc;transition:.15s}
+  .quiz .opt:hover{border-color:var(--primary)}
+  .quiz .opt.correct{border-color:var(--success);background:rgba(5,150,105,.14)}
+  .quiz .opt.wrong{border-color:var(--danger);background:rgba(220,38,38,.12)}
+  .quiz .opt input{margin-right:10px;accent-color:var(--primary)}
+  .qfeedback{font-size:.88rem;margin-top:6px;font-weight:600;min-height:1.2em}
+  .btn{cursor:pointer;border:none;font-family:inherit;font-weight:600;border-radius:10px;padding:10px 18px;font-size:.9rem;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .btn.ghost{background:#eef3f3;border:1px solid var(--card-border);color:var(--text)}
+  .foot{text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px}
+  .kpi{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .kpi div{text-align:center}
+  .kpi b{display:block;font-size:1.6rem;color:var(--primary)}
+  details.gloss{border:1px solid var(--card-border);border-radius:10px;padding:0 14px;margin:8px 0;background:#fafcfc}
+  details.gloss summary{cursor:pointer;padding:12px 0;font-weight:600;color:var(--primary)}
+  details.gloss p{padding-bottom:12px}
+  .toolgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:14px 0}
+  .dlbtn{cursor:pointer;text-align:left;border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;background:#f7fafa;color:var(--text);font-family:inherit;transition:.18s}
+  .dlbtn:hover{border-color:var(--primary);background:rgba(31,111,120,.07)}
+  .dlbtn b{display:block;color:var(--text);font-size:.95rem}
+  .dlbtn span{font-size:.78rem;color:var(--text-muted)}
+  /* ----- outils interactifs ----- */
+  .tool{border:1px solid var(--card-border);border-radius:14px;padding:18px;margin:16px 0;background:#f7fafa}
+  .tool h4{margin-top:0}
+  .field-row{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0}
+  .field{flex:1 1 130px}
+  .field label{display:block;font-size:.78rem;font-weight:600;color:var(--text-muted);margin-bottom:4px}
+  .field input,.field select,.tool input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--card-border);border-radius:9px;
+    font-family:inherit;font-size:.9rem;color:var(--text);background:#fff}
+  .field input:focus,.field select:focus,.tool input:focus{outline:2px solid rgba(31,111,120,.4);border-color:var(--primary)}
+  .resgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-top:12px}
+  .res{background:#fff;border:1px solid var(--card-border);border-radius:10px;padding:12px;text-align:center}
+  .res .rl{font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+  .res .rv{font-size:1.25rem;font-weight:800;margin-top:3px}
+  .res.good .rv{color:var(--success)} .res.bad .rv{color:var(--danger)} .res.neutral .rv{color:var(--primary)}
+  /* matrice des risques */
+  table.rmx{font-size:.82rem;text-align:center}
+  table.rmx th{background:#eef3f3}
+  td.rcell{text-align:center;font-weight:700;position:relative;cursor:default;border:1px solid #fff}
+  td.rcell.low{background:#d1fae5;color:#065f46}
+  td.rcell.med{background:#fef9c3;color:#854d0e}
+  td.rcell.high{background:#fed7aa;color:#9a3412}
+  td.rcell.crit{background:#fecaca;color:#991b1b}
+  .rdot{position:absolute;top:2px;right:4px;background:#1B2733;color:#fff;font-size:.62rem;border-radius:999px;padding:0 5px;font-weight:700}
+  .lvl-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.74rem;font-weight:700}
+  .lvl-low{background:#d1fae5;color:#065f46} .lvl-med{background:#fef9c3;color:#854d0e}
+  .lvl-high{background:#fed7aa;color:#9a3412} .lvl-crit{background:#fecaca;color:#991b1b}
+  .delx{cursor:pointer;color:var(--danger);background:none;border:none;font-size:1rem}
+  @media(max-width:560px){.wrap{padding:18px 12px 80px}.card{padding:20px}}
+  @media print{
+    body{background:#fff!important;color:#111}
+    .wrap{max-width:100%;padding:0}
+    nav.modnav,.btn,.dlbtn,.ex .toggle,#resetBtn,.toolgrid,.tool{display:none!important}
+    .module{display:block!important;page-break-after:always}
+    .card{box-shadow:none;border:1px solid #ccc;background:#fff;break-inside:avoid}
+    h1{background:none!important}
+    .ex .answer{display:block!important;background:#f5fdf9;border-top:1px solid #ccc}
+    details.gloss[open] p{display:block}
+    .badge,.pill,.callout,.tile,table{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="card hero">
+    <p style="margin:0 0 6px;letter-spacing:2px;font-size:.78rem;font-weight:700;color:var(--primary)">FOENIX CONSULTING · FORMATION PROFESSIONNELLE</p>
+    <span class="badge soft">Parcours IA · 26/06/2026</span>
+    <h1>Gestion de projet — Niveau intermédiaire</h1>
+    <p>Maîtriser les outils et méthodes de planification, de suivi, et de gestion des ressources, des risques et des parties prenantes, pour piloter un projet dans un contexte professionnel.</p>
+    <div class="meta-row">
+      <span class="pill">📈 Niveau intermédiaire</span>
+      <span class="pill">📚 4 modules</span>
+      <span class="pill">⏱️ ~20 heures</span>
+      <span class="pill">🧮 Outils EVM &amp; risques</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="bar"><i id="globalBar"></i></div>
+      <p class="muted" style="margin-top:8px;font-size:.85rem"><span id="globalPct">0</span>% du parcours validé · progression sauvegardée automatiquement</p>
+    </div>
+    <p style="margin-top:18px"><button class="btn" id="pdfBtn">📄 Télécharger le support en PDF</button></p>
+  </header>
+
+  <!-- OBJECTIFS -->
+  <section class="card">
+    <h2>🎯 Objectifs pédagogiques</h2>
+    <ul>
+      <li>Comprendre les <strong>fondements</strong> de la gestion de projet.</li>
+      <li>Maîtriser les <strong>outils et méthodes</strong> de planification et de suivi.</li>
+      <li>Gérer efficacement les <strong>ressources et les risques</strong>.</li>
+      <li><strong>Communiquer</strong> efficacement avec les parties prenantes.</li>
+      <li>Appliquer les principes en <strong>contexte professionnel</strong>.</li>
+    </ul>
+    <h3>Prérequis</h3>
+    <p>Une expérience basique en gestion de projet (ou domaine connexe), ainsi que des compétences de base en informatique et en gestion. Le niveau débutant FOENIX constitue une bonne mise à niveau préalable.</p>
+    <div class="callout"><span class="lbl">🧭 Fil rouge du parcours</span>
+      Un projet-exemple sert de support à toutes les notions : <strong>« Projet APP — développer et déployer une application de suivi des ventes pour 40 commerciaux, en 4 mois, pour un budget de 24 000 000 FCFA »</strong>. Assez riche pour mobiliser planification, ressources, risques et reporting.</div>
+  </section>
+
+  <!-- NAV -->
+  <nav class="modnav" id="modnav">
+    <button data-m="0" class="active">📘 M1 · Introduction</button>
+    <button data-m="1">🗂️ M2 · Planification</button>
+    <button data-m="2">⚠️ M3 · Ressources &amp; risques</button>
+    <button data-m="3">📊 M4 · Suivi &amp; contrôle</button>
+    <button data-m="4">🏆 Projet pratique</button>
+  </nav>
+
+  <!-- ============ MODULE 1 ============ -->
+  <section class="module show" data-mod="0">
+    <div class="card">
+      <span class="badge">Module 1</span>
+      <h2>📘 Introduction à la gestion de projet <span class="pill">4 heures</span></h2>
+
+      <h3>1.1 — Définition et importance</h3>
+      <p>La <strong>gestion de projet</strong> est l'application de connaissances, compétences, outils et techniques aux activités d'un projet pour en atteindre les objectifs dans le respect des contraintes (périmètre, délais, coûts, qualité). À ce niveau, on ne se contente plus de « faire » : on <strong>pilote</strong>, on <strong>arbitre</strong> et on <strong>rend compte</strong>.</p>
+      <div class="callout"><span class="lbl">💼 Pourquoi c'est stratégique</span>
+        Un projet bien géré transforme la stratégie de l'entreprise en résultats concrets : il sécurise le budget, respecte les délais, réduit les risques et aligne les parties prenantes. C'est le <strong>business case</strong> (la justification économique) qui légitime le projet.</div>
+
+      <h3>1.2 — Le cycle de vie d'un projet</h3>
+      <p>Les phases classiques : <strong>Démarrage → Planification → Exécution → Surveillance &amp; maîtrise → Clôture</strong>. À l'intermédiaire, on distingue surtout <strong>trois approches</strong> de cycle de vie selon le projet :</p>
+      <table>
+        <tr><th>Approche</th><th>Principe</th><th>Quand l'utiliser</th></tr>
+        <tr><td><strong>Prédictive (cycle en V / cascade)</strong></td><td>Tout est planifié en amont, exécution séquentielle.</td><td>Périmètre stable et bien connu (BTP, industrie).</td></tr>
+        <tr><td><strong>Adaptative (agile)</strong></td><td>Livraisons itératives par incréments, on s'ajuste en continu.</td><td>Besoin évolutif, incertitude forte (logiciel, R&amp;D).</td></tr>
+        <tr><td><strong>Hybride</strong></td><td>Mix : cadrage prédictif + itérations agiles.</td><td>Projets mixtes (ex. réglementaire + produit, notre projet APP).</td></tr>
+      </table>
+
+      <h3>1.3 — Rôles et responsabilités du chef de projet</h3>
+      <p>Le chef de projet n'a souvent <strong>pas d'autorité hiérarchique</strong> directe sur son équipe (organisation matricielle) : son influence repose sur le leadership et la communication. Ses responsabilités clés :</p>
+      <ul>
+        <li><strong>Cadrer</strong> : définir périmètre, objectifs, charte projet.</li>
+        <li><strong>Planifier</strong> : échéancier, budget, ressources, risques.</li>
+        <li><strong>Piloter</strong> : coordonner l'équipe, lever les blocages, arbitrer.</li>
+        <li><strong>Maîtriser</strong> : suivre l'avancement, gérer les changements.</li>
+        <li><strong>Communiquer</strong> : informer et engager les parties prenantes.</li>
+      </ul>
+      <div class="callout ok"><span class="lbl">🧩 Compétences (PMI Talent Triangle)</span>
+        Un bon chef de projet combine <strong>techniques de management de projet</strong> (planification, estimation, suivi), <strong>leadership</strong> (motiver, influencer, gérer les conflits) et <strong>management stratégique</strong> (aligner le projet sur la stratégie et la valeur).</div>
+      <p>Son autorité dépend de la <strong>structure de l'organisation</strong> :</p>
+      <table>
+        <tr><th>Structure</th><th>Autorité du chef de projet</th></tr>
+        <tr><td>Fonctionnelle</td><td>Faible (souvent pas de CP désigné)</td></tr>
+        <tr><td>Matricielle (faible → équilibrée → forte)</td><td>Croissante (partagée avec le responsable fonctionnel)</td></tr>
+        <tr><td>Par projet</td><td>Forte (le CP dirige une équipe dédiée)</td></tr>
+      </table>
+
+      <h3>1.4 — Vocabulaire intermédiaire</h3>
+      <details class="gloss"><summary>Charte de projet (project charter)</summary><p>Document qui autorise officiellement le projet et nomme le chef de projet, avec les objectifs de haut niveau.</p></details>
+      <details class="gloss"><summary>Référentiel (baseline)</summary><p>Version approuvée du plan (périmètre, échéancier, coûts) servant de référence pour mesurer les écarts.</p></details>
+      <details class="gloss"><summary>PMO (Project Management Office)</summary><p>Entité qui standardise les pratiques de gestion de projet dans l'organisation.</p></details>
+      <details class="gloss"><summary>Registre des parties prenantes</summary><p>Inventaire des parties prenantes avec leur influence, intérêt et stratégie d'engagement.</p></details>
+      <details class="gloss"><summary>Organisation matricielle</summary><p>Structure où les ressources dépendent à la fois d'un manager fonctionnel et du chef de projet.</p></details>
+
+      <h3>1.5 — Exercices corrigés</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 1</span><p>Pour le projet APP, le besoin métier risque d'évoluer au fil des retours des commerciaux. Quelle approche de cycle de vie recommandez-vous, et pourquoi ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Une approche <strong>hybride</strong> : cadrage prédictif (périmètre global, budget, jalons contractuels) puis <strong>déploiement par incréments agiles</strong> (un service à la fois), pour intégrer les retours utilisateurs sans tout replanifier.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 2</span><p>Le chef de projet n'a pas d'autorité hiérarchique sur deux développeurs prêtés par un autre service. Comment obtenir leur engagement ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Par le <strong>leadership d'influence</strong> : clarifier le sens et les priorités, négocier la disponibilité avec leur manager fonctionnel (organisation matricielle), formaliser les rôles via un <strong>RACI</strong>, et reconnaître leurs contributions.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 3</span><p>Dans une organisation <strong>matricielle faible</strong>, qui détient le plus d'autorité sur les ressources : le chef de projet ou le responsable fonctionnel ? Justifiez.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Le <strong>responsable fonctionnel</strong>. En matrice faible, le CP joue surtout un rôle de coordinateur : les ressources restent rattachées à leurs services et le pouvoir hiérarchique appartient au fonctionnel.</p></div>
+      </div>
+
+      <h3>1.6 — Mini-quiz</h3>
+      <div class="quiz" data-quiz="q1">
+        <p><strong>Q.</strong> Dans une organisation matricielle, sur quoi repose principalement l'autorité du chef de projet ?</p>
+        <label class="opt"><input type="radio" name="q1">Son pouvoir hiérarchique direct</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q1">Son leadership et sa capacité d'influence</label>
+        <label class="opt"><input type="radio" name="q1">Son ancienneté dans l'entreprise</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m1"> <span><strong>J'ai terminé le Module 1</strong> — fondements, cycles de vie (prédictif/agile/hybride) et rôle du chef de projet.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 2 ============ -->
+  <section class="module" data-mod="1">
+    <div class="card">
+      <span class="badge">Module 2</span>
+      <h2>🗂️ Planification de projet <span class="pill">6 heures</span></h2>
+
+      <h3>2.1 — Objectifs, livrables et critères d'acceptation</h3>
+      <p>On précise d'abord le « quoi » : <strong>objectif SMART</strong>, <strong>livrables</strong> attendus, et <strong>critères d'acceptation</strong> (les conditions pour qu'un livrable soit jugé conforme).</p>
+      <div class="callout ok"><span class="lbl">🧭 Projet APP</span>
+        <strong>Objectif SMART :</strong> livrer une application de suivi des ventes pour 40 commerciaux, opérationnelle en 4 mois, dans un budget de 24 000 000 FCFA.<br>
+        <strong>Livrable clé :</strong> l'application déployée. <strong>Critère d'acceptation :</strong> temps de réponse &lt; 2 s et 95 % des commerciaux formés.</div>
+
+      <h3>2.2 — L'organigramme des tâches (WBS)</h3>
+      <p>La <strong>WBS</strong> décompose le périmètre en <strong>lots de travaux livrables</strong>, eux-mêmes découpés en tâches. <strong>Règle des 100 % :</strong> la WBS contient 100 % du travail — ni plus, ni moins. Le plus petit niveau est le <strong>lot de travail</strong>, unité qu'on peut estimer, planifier et suivre.</p>
+      <div class="callout"><span class="lbl">🧭 WBS du projet APP (extrait)</span>
+        1. <strong>Cadrage</strong> : charte, périmètre, parties prenantes — 2. <strong>Conception</strong> : spécifications, maquettes, architecture — 3. <strong>Développement</strong> : modules ventes, reporting, synchronisation — 4. <strong>Tests</strong> : tests unitaires, recette, correction — 5. <strong>Déploiement</strong> : mise en production, formation, accompagnement.</div>
+
+      <h3>2.3 — Élaborer le plan de projet</h3>
+      <p>Le <strong>plan de management de projet</strong> est un document intégrateur qui réunit les référentiels et les plans subsidiaires :</p>
+      <table>
+        <tr><th>Composante</th><th>Contenu</th></tr>
+        <tr><td>Référentiel de contenu</td><td>Énoncé du contenu + WBS + dictionnaire de la WBS.</td></tr>
+        <tr><td>Référentiel d'échéancier</td><td>Planning de référence (Gantt, jalons, chemin critique).</td></tr>
+        <tr><td>Référentiel de coûts</td><td>Budget de référence (courbe en S).</td></tr>
+        <tr><td>Plans subsidiaires</td><td>Qualité, ressources, communication, risques, parties prenantes, changements.</td></tr>
+      </table>
+
+      <h3>2.4 — Séquencement &amp; chemin critique (CPM)</h3>
+      <p>On ordonne les tâches selon leurs <strong>dépendances</strong> (diagramme réseau). La <strong>méthode du chemin critique</strong> (CPM) identifie la plus longue séquence de tâches dépendantes : elle détermine la <strong>durée minimale</strong> du projet. Les tâches du chemin critique ont une <strong>marge nulle</strong> : tout retard sur elles retarde le projet.</p>
+      <div class="callout"><span class="lbl">📐 Marge totale (float)</span>
+        Marge = retard possible d'une tâche sans décaler la fin du projet. <strong>Marge totale = Date de début au plus tard − Date de début au plus tôt.</strong> Chemin critique ⇒ marge = 0.</div>
+
+      <h3>2.5 — Estimer : durées, ressources et coûts</h3>
+      <table>
+        <tr><th>Technique</th><th>Principe</th></tr>
+        <tr><td>Analogique</td><td>Par comparaison avec un projet passé similaire (rapide, peu précis).</td></tr>
+        <tr><td>Paramétrique</td><td>Par un ratio unitaire (ex. 2 h / poste × 120 postes).</td></tr>
+        <tr><td>Ascendante (bottom-up)</td><td>On estime chaque lot puis on additionne (précis, coûteux).</td></tr>
+        <tr><td>À trois points (PERT)</td><td>Estimation pondérée : <strong>(O + 4×M + P) / 6</strong> (Optimiste, Moyen, Pessimiste).</td></tr>
+      </table>
+      <div class="callout ok"><span class="lbl">🧮 Exemple PERT</span>
+        Migration des données estimée O = 4 j, M = 6 j, P = 14 j → durée attendue = (4 + 24 + 14) / 6 = <strong>7 jours</strong>. On prévoit en plus une <strong>réserve pour aléas</strong>.</div>
+
+      <h3>2.6 — Exercices corrigés</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 2.1 — PERT</span><p>Une tâche est estimée : optimiste = 4 j, probable = 6 j, pessimiste = 14 j. Quelle est la durée estimée (PERT) ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>(4 + 4×6 + 14) ÷ 6 = (4 + 24 + 14) ÷ 6 = 42 ÷ 6 = <strong>7 jours</strong>.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 2.2 — Chemin critique</span><p>Réseau (durées en jours, colonne « précède ») : A(2)→B,C · B(4)→D · C(3)→E · D(2)→F · E(5)→F · F(2). Trouvez le chemin critique et la durée du projet.</p>
+          <table>
+            <tr><th>Tâche</th><th>Durée</th><th>Précède</th></tr>
+            <tr><td>A</td><td>2</td><td>B, C</td></tr>
+            <tr><td>B</td><td>4</td><td>D</td></tr>
+            <tr><td>C</td><td>3</td><td>E</td></tr>
+            <tr><td>D</td><td>2</td><td>F</td></tr>
+            <tr><td>E</td><td>5</td><td>F</td></tr>
+            <tr><td>F</td><td>2</td><td>—</td></tr>
+          </table>
+        </div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer">
+          <p>Deux chemins : A→B→D→F = 2+4+2+2 = <strong>10 j</strong> · A→C→E→F = 2+3+5+2 = <strong>12 j</strong> ← chemin critique.<br>
+          La durée minimale du projet est de <strong>12 jours</strong>. Les tâches <strong>A, C, E, F</strong> ont une marge nulle.</p>
+        </div>
+      </div>
+
+      <h3>2.7 — Mini-quiz</h3>
+      <div class="quiz" data-quiz="q2">
+        <p><strong>Q.</strong> Que représente le chemin critique d'un projet ?</p>
+        <label class="opt"><input type="radio" name="q2">Le chemin le moins coûteux</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q2">La plus longue séquence de tâches dépendantes (durée minimale du projet)</label>
+        <label class="opt"><input type="radio" name="q2">Les tâches les plus risquées</label>
+        <div class="qfeedback"></div>
+      </div>
+      <div class="quiz" data-quiz="q2pert">
+        <p><strong>Q.</strong> Dans l'estimation à 3 points, quel coefficient applique-t-on à l'estimation la plus probable (M) ?</p>
+        <label class="opt"><input type="radio" name="q2pert">×2</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q2pert">×4</label>
+        <label class="opt"><input type="radio" name="q2pert">×6</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m2"> <span><strong>J'ai terminé le Module 2</strong> — livrables, plan de projet, chemin critique, marges et estimation (dont PERT).</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 3 ============ -->
+  <section class="module" data-mod="2">
+    <div class="card">
+      <span class="badge">Module 3</span>
+      <h2>⚠️ Gestion des ressources et des risques <span class="pill">5 heures</span></h2>
+
+      <h3>3.1 — Allouer et gérer les ressources</h3>
+      <p>On affecte les ressources (humaines et matérielles) aux lots de travail, puis on vérifie la charge avec un <strong>histogramme des ressources</strong>. Deux techniques d'optimisation :</p>
+      <ul>
+        <li><strong>Nivellement (leveling)</strong> : on lisse les sur-affectations même si la date de fin recule (contrainte = ressource limitée).</li>
+        <li><strong>Lissage (smoothing)</strong> : on optimise la charge <em>sans</em> dépasser le chemin critique (on utilise seulement les marges).</li>
+      </ul>
+      <div class="callout"><span class="lbl">👥 RACI — clarifier les responsabilités</span>
+        Pour chaque tâche : <strong>R</strong>esponsable (réalise), <strong>A</strong>pprobateur (1 seul, valide), <strong>C</strong>onsulté (avis), <strong>I</strong>nformé. Évite les zones grises et les doublons.</div>
+
+      <h3>3.2 — Identifier les risques</h3>
+      <p>Un <strong>risque</strong> est un événement incertain à effet positif (<em>opportunité</em>) ou négatif (<em>menace</em>). On les recense dans un <strong>registre des risques</strong>. Techniques d'identification : brainstorming, SWOT, revue de documents, jugement d'experts, retours d'expérience.</p>
+
+      <h3>3.3 — Analyser : qualitatif puis quantitatif</h3>
+      <ul>
+        <li><strong>Analyse qualitative :</strong> on note chaque risque sur <strong>Probabilité × Impact</strong> pour le prioriser (matrice ci-dessous).</li>
+        <li><strong>Analyse quantitative :</strong> on chiffre l'effet, ex. la <strong>valeur monétaire attendue (EMV)</strong> = Probabilité × Impact financier.</li>
+      </ul>
+      <div class="callout ok"><span class="lbl">🧮 Exemple EMV</span>
+        Risque « retard de migration » : probabilité 30 %, impact 2 000 000 FCFA → EMV = 0,30 × 2 000 000 = <strong>600 000 FCFA</strong> à provisionner en réserve.</div>
+
+      <!-- OUTIL : matrice des risques interactive -->
+      <div class="tool riskbuild">
+        <h4>🎛️ Matrice des risques interactive</h4>
+        <p class="muted" style="margin-bottom:8px">Ajoutez vos risques (probabilité × impact de 1 à 5). Le score, le niveau et la position dans la matrice se calculent automatiquement. Sauvegardé dans votre navigateur.</p>
+        <div class="field-row">
+          <div class="field" style="flex:2 1 220px"><label>Nom du risque</label><input type="text" id="rk_name" placeholder="ex. Indisponibilité d'un expert"></div>
+          <div class="field"><label>Probabilité (1-5)</label><select id="rk_p"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+          <div class="field"><label>Impact (1-5)</label><select id="rk_i"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+          <div class="field" style="flex:0 0 auto;align-self:flex-end"><button class="btn" id="rk_add">＋ Ajouter</button></div>
+        </div>
+        <div id="riskMatrix"></div>
+        <div id="riskList"></div>
+      </div>
+
+      <h3>3.4 — Répondre aux risques</h3>
+      <table>
+        <tr><th>Menaces (risques négatifs)</th><th>Opportunités (risques positifs)</th></tr>
+        <tr><td><strong>Éviter</strong> — supprimer la cause</td><td><strong>Exploiter</strong> — s'assurer qu'elle se produise</td></tr>
+        <tr><td><strong>Transférer</strong> — déléguer (assurance, sous-traitance)</td><td><strong>Partager</strong> — s'associer pour en profiter</td></tr>
+        <tr><td><strong>Atténuer</strong> — réduire probabilité/impact</td><td><strong>Améliorer</strong> — augmenter probabilité/impact</td></tr>
+        <tr><td><strong>Accepter</strong> — provisionner une réserve</td><td><strong>Accepter</strong> — en profiter si elle survient</td></tr>
+      </table>
+      <div class="callout warn"><span class="lbl">🛡️ Mitigation vs contingence</span>
+        La <strong>mitigation</strong> agit <em>avant</em> (réduire le risque). Le <strong>plan de contingence</strong> est un plan B activé <em>si</em> le risque survient. La <strong>réserve pour aléas</strong> couvre les risques connus ; la <strong>réserve de gestion</strong> couvre les imprévus inconnus.</div>
+
+      <h3>3.5 — Exercices corrigés</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice</span><p>Risque « panne du serveur le jour du déploiement », probabilité 20 %, impact 5 000 000 FCFA. Calculez l'EMV et proposez une stratégie de réponse.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>EMV = 0,20 × 5 000 000 = <strong>1 000 000 FCFA</strong>. Stratégie : <strong>atténuer</strong> (serveur de secours + tests de bascule) et/ou <strong>transférer</strong> (SLA avec l'hébergeur), avec un <strong>plan de contingence</strong> de retour arrière.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice</span><p>Deux développeurs sont sur-affectés à 150 % en semaine 3. Le projet a une marge sur ces tâches. Nivellement ou lissage ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p><strong>Lissage</strong> : puisqu'il existe une marge, on étale la charge dans cette marge <em>sans</em> repousser la date de fin (on ne touche pas au chemin critique).</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice — EMV nette</span><p>Deux risques sur le projet APP. <strong>Risque A (menace)</strong> : probabilité 30 %, impact −2 000 000 FCFA. <strong>Risque B (opportunité)</strong> : probabilité 20 %, impact +1 000 000 FCFA. Calculez l'EMV de chacun, l'EMV totale, et que prévoir ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>A : 0,30 × (−2 000 000) = <strong>−600 000</strong> · B : 0,20 × (+1 000 000) = <strong>+200 000</strong>.<br>EMV totale = −600 000 + 200 000 = <strong>−400 000 FCFA</strong>. On prévoit une <strong>réserve pour aléas ≈ 400 000 FCFA</strong> pour couvrir l'exposition nette.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice — RACI</span><p>Combien de « A » (approbateur) peut-il y avoir au maximum par tâche, et pourquoi ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p><strong>Un seul « A » par tâche.</strong> La redevabilité doit être portée par une personne unique : si deux personnes sont responsables in fine, personne ne l'est vraiment.</p></div>
+      </div>
+
+      <h3>3.6 — Mini-quiz</h3>
+      <div class="quiz" data-quiz="q3">
+        <p><strong>Q.</strong> Souscrire une assurance contre un risque correspond à quelle stratégie de réponse ?</p>
+        <label class="opt"><input type="radio" name="q3">Atténuer</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q3">Transférer</label>
+        <label class="opt"><input type="radio" name="q3">Éviter</label>
+        <div class="qfeedback"></div>
+      </div>
+      <div class="quiz" data-quiz="q3emv">
+        <p><strong>Q.</strong> Comment calcule-t-on la valeur monétaire attendue (EMV) d'un risque ?</p>
+        <label class="opt" data-correct="1"><input type="radio" name="q3emv">Probabilité × Impact financier</label>
+        <label class="opt"><input type="radio" name="q3emv">Impact ÷ Probabilité</label>
+        <label class="opt"><input type="radio" name="q3emv">Probabilité + Impact</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m3"> <span><strong>J'ai terminé le Module 3</strong> — allocation/optimisation des ressources, matrice des risques, EMV et stratégies de réponse.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 4 ============ -->
+  <section class="module" data-mod="3">
+    <div class="card">
+      <span class="badge">Module 4</span>
+      <h2>📊 Suivi et contrôle de projet <span class="pill">5 heures</span></h2>
+
+      <h3>4.1 — Méthodes de suivi et de contrôle</h3>
+      <p>Surveiller, c'est comparer en continu le <strong>réalisé</strong> au <strong>référentiel</strong>. Outils : revue des jalons, % d'avancement, tableau de bord (KPI), réunions d'avancement, et surtout la <strong>gestion de la valeur acquise (EVM)</strong> qui croise délais et coûts.</p>
+
+      <h3>4.2 — La valeur acquise (EVM)</h3>
+      <table>
+        <tr><th>Indicateur</th><th>Formule</th><th>Lecture</th></tr>
+        <tr><td><strong>PV</strong> — valeur planifiée</td><td>budget prévu à date</td><td>ce qu'on devait avoir produit</td></tr>
+        <tr><td><strong>EV</strong> — valeur acquise</td><td>BAC × % réel achevé</td><td>ce qu'on a réellement produit</td></tr>
+        <tr><td><strong>AC</strong> — coût réel</td><td>dépensé à date</td><td>ce qu'on a réellement payé</td></tr>
+        <tr><td><strong>CV</strong> — écart de coût</td><td>EV − AC</td><td>&gt; 0 : sous le budget</td></tr>
+        <tr><td><strong>SV</strong> — écart de délai</td><td>EV − PV</td><td>&gt; 0 : en avance</td></tr>
+        <tr><td><strong>CPI</strong> — perf. coût</td><td>EV ÷ AC</td><td>&gt; 1 : rentable</td></tr>
+        <tr><td><strong>SPI</strong> — perf. délai</td><td>EV ÷ PV</td><td>&gt; 1 : en avance</td></tr>
+        <tr><td><strong>EAC</strong> — coût final estimé</td><td>BAC ÷ CPI</td><td>budget final attendu</td></tr>
+      </table>
+
+      <!-- OUTIL : calculateur EVM -->
+      <div class="tool evm">
+        <h4>🧮 Calculateur de valeur acquise (EVM)</h4>
+        <p class="muted" style="margin-bottom:8px">Saisissez les 4 valeurs (mêmes unités, ex. FCFA). Les indicateurs se calculent automatiquement. Sauvegardé dans votre navigateur.</p>
+        <div class="field-row">
+          <div class="field"><label>BAC — budget total</label><input type="number" id="evm_bac" placeholder="ex. 24000000"></div>
+          <div class="field"><label>PV — valeur planifiée</label><input type="number" id="evm_pv" placeholder="ex. 12000000"></div>
+          <div class="field"><label>EV — valeur acquise</label><input type="number" id="evm_ev" placeholder="ex. 9600000"></div>
+          <div class="field"><label>AC — coût réel</label><input type="number" id="evm_ac" placeholder="ex. 11000000"></div>
+        </div>
+        <div class="resgrid" id="evmResults"></div>
+        <p class="muted" id="evmVerdict" style="margin-top:10px;font-size:.85rem"></p>
+      </div>
+
+      <h3>4.3 — Gérer les changements et les déviations</h3>
+      <p>Tout changement de périmètre passe par un <strong>processus de maîtrise des changements</strong> : demande formelle → analyse d'impact (délai, coût, risque) → décision (<strong>Comité de contrôle des changements / CCB</strong>) → mise à jour des référentiels → communication. On consigne tout dans un <strong>journal des changements</strong>.</p>
+      <div class="callout warn"><span class="lbl">🚧 Dérive du périmètre (scope creep)</span>
+        Ajouter des fonctionnalités « tant qu'on y est » sans passer par le processus = dérapage des délais et coûts. La discipline du contrôle des changements protège le référentiel.</div>
+
+      <h3>4.4 — Rapports et communication</h3>
+      <p>Un <strong>plan de communication</strong> définit, pour chaque partie prenante : quoi, à quelle fréquence, par quel canal, par qui. Types de rapports :</p>
+      <table>
+        <tr><th>Rapport</th><th>Contenu</th><th>Destinataire</th></tr>
+        <tr><td>Avancement (status)</td><td>Fait / en cours / à venir, KPI, EVM</td><td>Équipe, sponsor</td></tr>
+        <tr><td>Exception</td><td>Alerte sur un écart majeur + plan d'action</td><td>Sponsor, COPIL</td></tr>
+        <tr><td>Tableau de bord</td><td>Indicateurs synthétiques (feux 🟢🟠🔴)</td><td>Direction</td></tr>
+      </table>
+      <h4>Prioriser les parties prenantes : matrice pouvoir / intérêt</h4>
+      <table>
+        <tr><th></th><th>Intérêt faible</th><th>Intérêt fort</th></tr>
+        <tr><th>Pouvoir fort</th><td>Garder satisfait</td><td><strong>Gérer de près (clé)</strong></td></tr>
+        <tr><th>Pouvoir faible</th><td>Surveiller (effort minimal)</td><td>Tenir informé</td></tr>
+      </table>
+      <div class="callout"><span class="lbl">🧮 Formule — nombre de canaux de communication</span>
+        <strong>Canaux = n × (n − 1) ÷ 2</strong> (n = nombre de personnes). Le nombre de canaux explose avec la taille de l'équipe — d'où l'importance d'un plan de communication structuré.</div>
+
+      <h3>4.5 — Exercices corrigés</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 4.1 — Valeur acquise</span><p>Projet APP, budget total BAC = 24 000 000 FCFA. À mi-parcours, on devait avoir réalisé 50 % du travail, mais on n'en a réalisé que 40 %, en ayant dépensé 11 000 000 FCFA. Calculez VP, VA, CR, puis CV, SV, IPC, IPD. Le projet est-il en bonne santé ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>VP = 50 % × 24 000 000 = <strong>12 000 000</strong> · VA = 40 % × 24 000 000 = <strong>9 600 000</strong> · CR = <strong>11 000 000</strong>.<br>
+        CV = VA − CR = 9 600 000 − 11 000 000 = <strong>−1 400 000</strong> (dépassement) · SV = VA − VP = 9 600 000 − 12 000 000 = <strong>−2 400 000</strong> (retard).<br>
+        IPC = 9,6 ÷ 11 = <strong>0,87</strong> · IPD = 9,6 ÷ 12 = <strong>0,80</strong>. Les deux indices &lt; 1 : le projet est <strong>à la fois en retard et en dépassement</strong> → il faut réagir (re-planifier, ajuster périmètre ou ressources).</p>
+        <p class="muted">💡 Vérifiez ces chiffres avec le calculateur EVM ci-dessus (BAC 24M, PV 12M, EV 9,6M, AC 11M).</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 4.2 — Canaux de communication</span><p>L'équipe passe de 6 à 10 personnes. De combien augmentent les canaux de communication ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>6 pers. : 6 × 5 ÷ 2 = <strong>15 canaux</strong> · 10 pers. : 10 × 9 ÷ 2 = <strong>45 canaux</strong>. Augmentation : <strong>+30 canaux</strong> — d'où l'importance d'un plan de communication structuré quand l'équipe grandit.</p></div>
+      </div>
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice — changement</span><p>Le sponsor demande d'ajouter un module de reporting en cours d'exécution. Quelle est la bonne démarche ?</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Ne pas l'intégrer directement. Ouvrir une <strong>demande de changement</strong>, réaliser l'<strong>analyse d'impact</strong> (délai/coût/risque), la soumettre au <strong>CCB</strong>, puis si approuvée, <strong>mettre à jour les référentiels</strong> et communiquer. Sinon : risque de scope creep.</p></div>
+      </div>
+
+      <h3>4.6 — Mini-quiz</h3>
+      <div class="quiz" data-quiz="q4">
+        <p><strong>Q.</strong> Un CPI de 0,90 signifie que le projet est…</p>
+        <label class="opt"><input type="radio" name="q4">En avance sur les délais</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q4">En dépassement de coût (on dépense plus que la valeur produite)</label>
+        <label class="opt"><input type="radio" name="q4">Exactement dans le budget</label>
+        <div class="qfeedback"></div>
+      </div>
+      <div class="quiz" data-quiz="q4comm">
+        <p><strong>Q.</strong> Avec 5 personnes, combien y a-t-il de canaux de communication ?</p>
+        <label class="opt"><input type="radio" name="q4comm">5</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q4comm">10</label>
+        <label class="opt"><input type="radio" name="q4comm">20</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m4"> <span><strong>J'ai terminé le Module 4</strong> — suivi, EVM, maîtrise des changements (CCB) et reporting aux parties prenantes.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ PROJET PRATIQUE ============ -->
+  <section class="module" data-mod="4">
+    <div class="card">
+      <span class="badge">Projet pratique · preuve de compétence</span>
+      <h2>🏆 Réaliser un plan de projet complet</h2>
+      <p>Élaborez le <strong>plan de projet</strong> d'un projet fictif ou réel, en appliquant les méthodes du parcours. Objectif : un dossier que vous pourriez présenter à un sponsor.</p>
+
+      <h3>🧰 Boîte à outils : templates à télécharger</h3>
+      <div class="toolgrid">
+        <button class="dlbtn" data-tpl="plan"><b>📋 Plan de projet</b><span>.txt — charte, périmètre, jalons</span></button>
+        <button class="dlbtn" data-tpl="wbs"><b>🌳 WBS</b><span>.csv — lots &amp; lots de travail</span></button>
+        <button class="dlbtn" data-tpl="risques"><b>⚠️ Registre des risques</b><span>.csv — proba×impact, EMV, réponse</span></button>
+        <button class="dlbtn" data-tpl="raci"><b>👥 Matrice RACI</b><span>.csv — responsabilités</span></button>
+        <button class="dlbtn" data-tpl="evm"><b>📊 Suivi EVM</b><span>.csv — PV/EV/AC, CPI/SPI</span></button>
+        <button class="dlbtn" data-tpl="comm"><b>📣 Plan de communication</b><span>.csv — quoi/qui/quand/canal</span></button>
+        <button class="dlbtn" data-tpl="change"><b>🔁 Journal des changements</b><span>.csv — demandes &amp; décisions</span></button>
+      </div>
+
+      <h3>Livrables attendus du dossier</h3>
+      <p class="muted">Cochez chaque livrable — la progression du parcours avance.</p>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>1. Charte de projet</strong> — objectif, business case, sponsor, jalons de haut niveau.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>2. Énoncé du contenu + WBS</strong> — livrables, exclusions, lots de travail.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>3. Échéancier</strong> — diagramme réseau / Gantt, chemin critique identifié.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>4. Budget de référence</strong> — estimation des coûts + réserves.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>5. Plan des ressources + RACI</strong> — affectations et responsabilités.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>6. Registre des risques</strong> — ≥ 5 risques notés (proba×impact), EMV, réponses.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>7. Plan de communication</strong> — matrice parties prenantes × besoins.</span></label>
+      <label class="check"><input type="checkbox" data-task="proj"> <span><strong>8. Dispositif de suivi</strong> — KPI + tableau EVM (PV/EV/AC).</span></label>
+
+      <h3>Grille d'évaluation (/100)</h3>
+      <table>
+        <tr><th>Critère</th><th>Points</th></tr>
+        <tr><td>Charte claire et objectif réellement SMART</td><td>/15</td></tr>
+        <tr><td>WBS complète et cohérente (règle des 100 %)</td><td>/15</td></tr>
+        <tr><td>Planning avec chemin critique identifié</td><td>/15</td></tr>
+        <tr><td>Budget chiffré avec réserves justifiées</td><td>/10</td></tr>
+        <tr><td>Matrice RACI correcte (un seul A par tâche)</td><td>/10</td></tr>
+        <tr><td>Registre des risques avec EMV et réponses</td><td>/20</td></tr>
+        <tr><td>Plan de communication et priorisation des parties prenantes</td><td>/10</td></tr>
+        <tr><td>Dispositif de suivi pertinent</td><td>/5</td></tr>
+        <tr><th>TOTAL</th><th>/100</th></tr>
+      </table>
+
+      <h3>Valoriser ce livrable</h3>
+      <div class="callout ok"><span class="lbl">💬 Pitch d'entretien</span>
+        « J'ai élaboré le plan complet du projet APP (application de suivi des ventes, 40 commerciaux, 24 000 000 FCFA) : WBS selon la règle des 100 %, chemin critique, budget avec réserves, registre des risques chiffré en EMV, plan de communication et suivi par valeur acquise (IPC/IPD). »</div>
+
+      <h3>🚀 Pour aller plus loin</h3>
+      <div class="grid">
+        <div class="tile"><h4>Agile à l'échelle</h4><p class="muted">Scrum, Kanban et leur mise à l'échelle pour les grands programmes.</p></div>
+        <div class="tile"><h4>Risques quantitatifs</h4><p class="muted">Simulation de Monte-Carlo, arbres de décision.</p></div>
+        <div class="tile"><h4>Certification PMP</h4><p class="muted">La référence internationale du PMI valide ces compétences.</p></div>
+      </div>
+
+      <h3>📖 Glossaire récapitulatif</h3>
+      <table>
+        <tr><th>Terme</th><th>Définition</th></tr>
+        <tr><td>Baseline (référentiel)</td><td>Version approuvée du plan servant de référence pour mesurer les écarts.</td></tr>
+        <tr><td>CCB</td><td>Comité de contrôle des changements qui décide d'accepter/refuser une modification.</td></tr>
+        <tr><td>Chemin critique (CPM)</td><td>Plus longue séquence de tâches dépendantes ; fixe la durée minimale du projet.</td></tr>
+        <tr><td>CPI / SPI</td><td>Indices de performance des coûts (EV/AC) et des délais (EV/PV).</td></tr>
+        <tr><td>EAC</td><td>Estimation du coût final du projet (souvent BAC/CPI).</td></tr>
+        <tr><td>EMV</td><td>Valeur monétaire attendue d'un risque = probabilité × impact financier.</td></tr>
+        <tr><td>EVM</td><td>Gestion de la valeur acquise : croise avancement, délais et coûts.</td></tr>
+        <tr><td>Marge (float)</td><td>Retard possible d'une tâche sans décaler la fin du projet.</td></tr>
+        <tr><td>Nivellement / Lissage</td><td>Optimisation des ressources (avec ou sans décalage de la fin).</td></tr>
+        <tr><td>PERT</td><td>Estimation à 3 points : (O + 4M + P) / 6.</td></tr>
+        <tr><td>RACI</td><td>Responsable, Approbateur, Consulté, Informé.</td></tr>
+        <tr><td>Scope creep</td><td>Dérive du périmètre par ajouts non maîtrisés.</td></tr>
+        <tr><td>WBS</td><td>Organigramme des tâches : découpage hiérarchique des livrables.</td></tr>
+      </table>
+
+      <h3>🧮 Mémo des formules</h3>
+      <table>
+        <tr><th>Sujet</th><th>Formule</th></tr>
+        <tr><td>Estimation à 3 points (PERT)</td><td>(O + 4×M + P) ÷ 6</td></tr>
+        <tr><td>Écart de coût (CV)</td><td>VA − CR  (&gt; 0 = favorable)</td></tr>
+        <tr><td>Écart de délai (SV)</td><td>VA − VP  (&gt; 0 = favorable)</td></tr>
+        <tr><td>Indice de performance coût (IPC / CPI)</td><td>VA ÷ CR  (&gt; 1 = favorable)</td></tr>
+        <tr><td>Indice de performance délai (IPD / SPI)</td><td>VA ÷ VP  (&gt; 1 = favorable)</td></tr>
+        <tr><td>Estimation à l'achèvement (EAC)</td><td>BAC ÷ IPC</td></tr>
+        <tr><td>Reste à faire (ETC)</td><td>EAC − CR</td></tr>
+        <tr><td>Valeur monétaire attendue (EMV)</td><td>Probabilité × Impact</td></tr>
+        <tr><td>Canaux de communication</td><td>n × (n − 1) ÷ 2</td></tr>
+      </table>
+
+      <label class="check"><input type="checkbox" data-done="proj"> <span><strong>J'ai réalisé mon plan de projet complet</strong> — prêt à le présenter.</span></label>
+
+      <div class="card" style="margin-top:24px;text-align:center;background:rgba(5,150,105,.05);border-color:rgba(5,150,105,.25)">
+        <h2 style="justify-content:center">Tableau de bord</h2>
+        <div class="kpi">
+          <div><b id="kModules">0/5</b><span class="muted">étapes validées</span></div>
+          <div><b id="kQuiz">0/7</b><span class="muted">quiz réussis</span></div>
+          <div><b id="kPct">0%</b><span class="muted">parcours</span></div>
+        </div>
+        <p style="margin-top:16px"><button class="btn ghost" id="resetBtn">↺ Réinitialiser ma progression</button></p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot"><strong>FOENIX CONSULTING</strong> — Parcours « Gestion de projet », niveau intermédiaire · 26/06/2026<br>Progression enregistrée dans votre navigateur (localStorage).</p>
+</div>
+
+<script>
+(function(){
+  const KEY='formation_gp_inter_v1';
+  const state=JSON.parse(localStorage.getItem(KEY)||'{}');
+  const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+
+  /* navigation */
+  const nav=document.getElementById('modnav'), mods=[...document.querySelectorAll('.module')];
+  nav.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mods.forEach(m=>m.classList.toggle('show', m.dataset.mod===b.dataset.m));
+    window.scrollTo({top:nav.offsetTop-8,behavior:'smooth'});
+  });
+
+  /* exercise toggles */
+  document.querySelectorAll('.ex .toggle').forEach(btn=>{
+    btn.dataset.lbl=btn.textContent;
+    btn.addEventListener('click',()=>{
+      const open=btn.nextElementSibling.classList.toggle('show');
+      btn.textContent=open?'Masquer la correction ▴':btn.dataset.lbl;
+    });
+  });
+
+  /* quiz */
+  const quizDone={};
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const id=q.dataset.quiz, fb=q.querySelector('.qfeedback');
+    q.querySelectorAll('.opt').forEach(opt=>opt.addEventListener('click',()=>{
+      if(quizDone[id])return;
+      const correct=opt.dataset.correct==='1';
+      opt.classList.add(correct?'correct':'wrong');
+      if(correct){fb.textContent='✅ Correct !';fb.style.color='var(--success)';quizDone[id]=true;state['quiz_'+id]=true;save();refresh();}
+      else{fb.textContent='❌ Pas tout à fait, réessayez.';fb.style.color='var(--danger)';setTimeout(()=>opt.classList.remove('wrong'),900);}
+    }));
+    if(state['quiz_'+id]){quizDone[id]=true;const c=q.querySelector('[data-correct="1"]');c.classList.add('correct');c.querySelector('input').checked=true;fb.textContent='✅ Validé';fb.style.color='var(--success)';}
+  });
+
+  /* checkboxes */
+  document.querySelectorAll('input[data-done]').forEach(cb=>{
+    const k='done_'+cb.dataset.done; cb.checked=!!state[k];
+    cb.addEventListener('change',()=>{state[k]=cb.checked;save();refresh();});
+  });
+  document.querySelectorAll('input[data-task]').forEach((cb,i)=>{
+    const k='task_'+i; cb.checked=!!state[k];
+    cb.addEventListener('change',()=>{state[k]=cb.checked;save();refresh();});
+  });
+
+  /* progression */
+  const QUIZZES=['q1','q2','q2pert','q3','q3emv','q4','q4comm'];
+  function refresh(){
+    const steps=['done_m1','done_m2','done_m3','done_m4','done_proj'];
+    const stepDone=steps.filter(s=>state[s]).length;
+    const quizOk=QUIZZES.filter(s=>state['quiz_'+s]).length;
+    const tasks=[...document.querySelectorAll('input[data-task]')];
+    const tasksOk=tasks.filter((_,i)=>state['task_'+i]).length;
+    const total=steps.length+QUIZZES.length+tasks.length, done=stepDone+quizOk+tasksOk;
+    const pct=Math.round(done/total*100);
+    document.getElementById('globalBar').style.width=pct+'%';
+    document.getElementById('globalPct').textContent=pct;
+    const km=document.getElementById('kModules'); if(km)km.textContent=stepDone+'/5';
+    const kq=document.getElementById('kQuiz'); if(kq)kq.textContent=quizOk+'/'+QUIZZES.length;
+    const kp=document.getElementById('kPct'); if(kp)kp.textContent=pct+'%';
+  }
+
+  /* reset */
+  const rb=document.getElementById('resetBtn');
+  if(rb)rb.addEventListener('click',()=>{localStorage.removeItem(KEY);location.reload();});
+
+  /* ===== Calculateur EVM ===== */
+  const evmIds=['bac','pv','ev','ac'];
+  const fmt=n=>isFinite(n)?Math.round(n).toLocaleString('fr-FR'):'—';
+  const fmt2=n=>isFinite(n)?n.toFixed(2):'—';
+  function evmCalc(){
+    const v={}; evmIds.forEach(f=>{const el=document.getElementById('evm_'+f);v[f]=parseFloat(el.value)||0;});
+    state.evm=v; save();
+    const {bac,pv,ev,ac}=v;
+    const cv=ev-ac, sv=ev-pv, cpi=ac?ev/ac:NaN, spi=pv?ev/pv:NaN, eac=cpi?bac/cpi:NaN, vac=bac-eac, pct=bac?ev/bac*100:0;
+    const cells=[
+      ['CV (coût)',fmt(cv),cv>=0],['SV (délai)',fmt(sv),sv>=0],
+      ['CPI',fmt2(cpi),cpi>=1],['SPI',fmt2(spi),spi>=1],
+      ['EAC (coût final)',fmt(eac),isFinite(eac)&&eac<=bac],['VAC (gain/perte)',fmt(vac),vac>=0],
+      ['% achevé',isFinite(pct)?Math.round(pct)+' %':'—','neutral']
+    ];
+    const box=document.getElementById('evmResults');
+    box.innerHTML=cells.map(c=>{
+      const cls=c[2]==='neutral'?'neutral':(c[2]?'good':'bad');
+      return '<div class="res '+cls+'"><div class="rl">'+c[0]+'</div><div class="rv">'+c[1]+'</div></div>';
+    }).join('');
+    const verdict=document.getElementById('evmVerdict');
+    if(!ac&&!pv){verdict.textContent='';return;}
+    let msg=[];
+    if(isFinite(cpi))msg.push(cpi>=1?'✅ Coûts maîtrisés (CPI ≥ 1)':'⚠️ Dépassement de coût (CPI < 1)');
+    if(isFinite(spi))msg.push(spi>=1?'✅ Dans les délais (SPI ≥ 1)':'⚠️ Retard sur le planning (SPI < 1)');
+    verdict.textContent=msg.join('  ·  ');
+  }
+  if(document.getElementById('evm_bac')){
+    if(state.evm)evmIds.forEach(f=>{document.getElementById('evm_'+f).value=state.evm[f]||'';});
+    evmIds.forEach(f=>document.getElementById('evm_'+f).addEventListener('input',evmCalc));
+    evmCalc();
+  }
+
+  /* ===== Matrice des risques interactive ===== */
+  let risks=Array.isArray(state.risks)?state.risks:[];
+  function lvl(s){return s>=15?['Critique','crit']:s>=10?['Élevé','high']:s>=5?['Moyen','med']:['Faible','low'];}
+  function saveR(){state.risks=risks;save();}
+  function renderRisk(){
+    const mx=document.getElementById('riskMatrix'); if(!mx)return;
+    const counts={}; risks.forEach(r=>{const k=r.p+'-'+r.i;counts[k]=(counts[k]||0)+1;});
+    let h='<table class="rmx"><tr><th>P \\ I</th>';
+    for(let i=1;i<=5;i++)h+='<th>'+i+'</th>'; h+='</tr>';
+    for(let p=5;p>=1;p--){
+      h+='<tr><th>'+p+'</th>';
+      for(let i=1;i<=5;i++){const s=p*i,c=counts[p+'-'+i];
+        h+='<td class="rcell '+lvl(s)[1]+'">'+s+(c?'<span class="rdot">'+c+'</span>':'')+'</td>';}
+      h+='</tr>';
+    }
+    h+='</table>';
+    mx.innerHTML=h;
+    const list=document.getElementById('riskList');
+    if(!risks.length){list.innerHTML='<p class="muted" style="margin-top:10px">Aucun risque saisi pour l\'instant.</p>';return;}
+    let t='<table><tr><th>Risque</th><th>P</th><th>I</th><th>Score</th><th>Niveau</th><th></th></tr>';
+    risks.forEach((r,idx)=>{const L=lvl(r.p*r.i);
+      t+='<tr><td>'+r.name.replace(/</g,'&lt;')+'</td><td>'+r.p+'</td><td>'+r.i+'</td><td><strong>'+(r.p*r.i)+'</strong></td>'+
+         '<td><span class="lvl-tag lvl-'+L[1]+'">'+L[0]+'</span></td>'+
+         '<td><button class="delx" data-idx="'+idx+'" title="Supprimer">✕</button></td></tr>';
+    });
+    t+='</table>';
+    list.innerHTML=t;
+    list.querySelectorAll('.delx').forEach(b=>b.addEventListener('click',()=>{risks.splice(+b.dataset.idx,1);saveR();renderRisk();}));
+  }
+  const rkAdd=document.getElementById('rk_add');
+  if(rkAdd){
+    rkAdd.addEventListener('click',()=>{
+      const name=document.getElementById('rk_name').value.trim()||'Risque sans nom';
+      const p=+document.getElementById('rk_p').value, i=+document.getElementById('rk_i').value;
+      risks.push({name,p,i}); saveR(); renderRisk();
+      document.getElementById('rk_name').value='';
+    });
+    renderRisk();
+  }
+
+  /* ===== Templates ===== */
+  const TPL={
+    plan:{name:'plan-de-projet.txt',content:
+`PLAN DE PROJET — ____________________________
+Chef de projet : ____________   Sponsor : ____________   Date : __ / __ / ____
+
+1. BUSINESS CASE (pourquoi)
+   ..................................................................
+2. OBJECTIF (SMART)
+   ..................................................................
+3. PERIMETRE (inclus / exclu)
+   Inclus : .........................................................
+   Exclu  : .........................................................
+4. JALONS DE HAUT NIVEAU
+   - ................................................................
+5. BUDGET GLOBAL : __________   RESERVES : __________
+6. PRINCIPAUX RISQUES
+   - ................................................................
+7. PARTIES PRENANTES CLES
+   - ................................................................
+`},
+    wbs:{name:'wbs.csv',content:`Lot;Lot de travail;Livrable;Responsable;Duree;Cout estime\nLot 1;1.1;;;;\nLot 1;1.2;;;;\nLot 2;2.1;;;;\n`},
+    risques:{name:'registre-risques.csv',content:`ID;Risque;Categorie;Probabilite(%);Impact(FCFA);EMV;Strategie;Plan de reponse;Responsable\nR1;;;30;2000000;600000;Attenuer;;\nR2;;;;;;;;\n`},
+    raci:{name:'matrice-raci.csv',content:`Tache;Chef de projet;Equipe;Sponsor;Metier\n;R=Realise A=Approuve C=Consulte I=Informe;;;\nTache 1;A;R;I;C\n`},
+    evm:{name:'suivi-evm.csv',content:`Periode;BAC;PV;EV;AC;CV=EV-AC;SV=EV-PV;CPI=EV/AC;SPI=EV/PV;EAC=BAC/CPI\nS1;10000000;;;;;;;;\nS2;10000000;;;;;;;;\n`},
+    comm:{name:'plan-communication.csv',content:`Partie prenante;Besoin d'info;Frequence;Canal;Responsable\nSponsor;Avancement + risques;Hebdo;Reunion COPIL;Chef de projet\nEquipe;Taches + blocages;Quotidien;Stand-up;Chef de projet\n`},
+    change:{name:'journal-changements.csv',content:`ID;Date;Demande;Demandeur;Impact delai;Impact cout;Decision CCB;Statut\nC1;;;;;;En attente;\n`}
+  };
+  function download(filename,content){
+    const blob=new Blob(['﻿'+content],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+  document.querySelectorAll('.dlbtn').forEach(b=>b.addEventListener('click',()=>{const t=TPL[b.dataset.tpl];if(t)download(t.name,t.content);}));
+
+  /* ===== Export PDF (jsPDF, repli impression) ===== */
+  const pdfBtn=document.getElementById('pdfBtn');
+  function loadJsPDF(){return new Promise((res,rej)=>{
+    if(window.jspdf&&window.jspdf.jsPDF)return res();
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+  });}
+  const SKIP=el=>el.matches('button,nav,input,select,script,.toggle,.qfeedback,.bar,.tool');
+  function walk(node,blocks){
+    for(const el of node.children){
+      if(SKIP(el))continue;
+      const tag=el.tagName;
+      if(tag==='TABLE'){blocks.push({tag:'TABLE',rows:[...el.rows].map(r=>({head:[...r.cells].some(c=>c.tagName==='TH'),cells:[...r.cells].map(c=>c.textContent)}))});continue;}
+      if(/^H[1-4]$/.test(tag)){blocks.push({tag,text:el.textContent});continue;}
+      if(tag==='P'){blocks.push({tag:'P',text:el.textContent});continue;}
+      if(tag==='LI'){blocks.push({tag:'LI',text:el.textContent});continue;}
+      if(tag==='UL'||tag==='OL'){walk(el,blocks);continue;}
+      if(tag==='SUMMARY'){blocks.push({tag:'H4',text:el.textContent});continue;}
+      if(el.matches('.callout')){blocks.push({tag:'NOTE',text:el.textContent});continue;}
+      if(el.matches('.tile')){blocks.push({tag:'P',text:el.textContent});continue;}
+      if(tag==='LABEL'){blocks.push({tag:'P',text:'[ ] '+el.textContent});continue;}
+      walk(el,blocks);
+    }
+  }
+  async function makePDF(){
+    const old=pdfBtn.textContent; pdfBtn.disabled=true; pdfBtn.textContent='⏳ Génération du PDF…';
+    try{await loadJsPDF();}
+    catch(e){pdfBtn.textContent=old;pdfBtn.disabled=false;document.querySelectorAll('details.gloss').forEach(d=>d.open=true);window.print();return;}
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'pt',format:'a4'});
+    const M=48,W=doc.internal.pageSize.getWidth(),Hp=doc.internal.pageSize.getHeight();let y=M;
+    const clean=s=>(s||'').replace(/\s+/g,' ').replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g,'').trim();
+    const need=h=>{if(y+h>Hp-M){doc.addPage();y=M;}};
+    function line(text,o){o=o||{};const size=o.size||10,gap=o.gap==null?4:o.gap,indent=o.indent||0;
+      doc.setFont('helvetica',o.style||'normal');doc.setFontSize(size);doc.setTextColor.apply(doc,o.color||[34,34,34]);
+      doc.splitTextToSize((o.prefix||'')+text,W-2*M-indent).forEach(ln=>{need(size+gap);doc.text(ln,M+indent,y);y+=size+gap;});}
+    const blocks=[]; const hero=document.querySelector('header.hero'); if(hero)walk(hero,blocks);
+    document.querySelectorAll('.module').forEach(m=>walk(m,blocks));
+    blocks.forEach(b=>{
+      if(b.tag==='TABLE'){y+=4;b.rows.forEach(r=>{const t=r.cells.map(clean).filter(Boolean).join('   |   ');if(t)line(t,{size:9,style:r.head?'bold':'normal',color:r.head?[31,111,120]:[70,70,70],gap:3});});y+=6;return;}
+      const txt=clean(b.text); if(!txt)return;
+      switch(b.tag){
+        case 'H1': y+=4; need(26); line(txt,{size:18,style:'bold',color:[31,111,120],gap:9}); break;
+        case 'H2': y+=12; line(txt,{size:14,style:'bold',color:[31,111,120],gap:6}); break;
+        case 'H3': y+=8; line(txt,{size:12,style:'bold',color:[19,78,84],gap:5}); break;
+        case 'H4': y+=2; line(txt,{size:10.5,style:'bold',color:[51,51,51],gap:4}); break;
+        case 'LI': line(txt,{size:10,indent:16,prefix:'-  ',gap:3}); break;
+        case 'NOTE': y+=2; line(txt,{size:9.5,style:'italic',color:[90,90,90],indent:8,gap:3}); y+=3; break;
+        default: line(txt,{size:10,gap:4});
+      }
+    });
+    const n=doc.internal.getNumberOfPages();
+    for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(150,150,150);
+      doc.text('Gestion de projet — Niveau intermédiaire — page '+i+'/'+n,W/2,Hp-20,{align:'center'});}
+    doc.save('Formation_Gestion_de_projet_Intermediaire.pdf');
+    pdfBtn.textContent=old; pdfBtn.disabled=false;
+  }
+  if(pdfBtn)pdfBtn.addEventListener('click',makePDF);
+
+  refresh();
+})();
+</script>
+</body>
+</html>
