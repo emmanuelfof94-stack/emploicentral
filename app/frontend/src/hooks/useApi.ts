@@ -505,6 +505,7 @@ export interface CvTemplateMeta {
   rule: string;
   serif: boolean;
   compact: boolean;
+  layout?: 'mono' | 'band' | 'sidebar';
 }
 
 export function useCvTemplates(enabled = true) {

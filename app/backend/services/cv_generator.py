@@ -28,7 +28,10 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import HRFlowable, ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.lib import colors
+from reportlab.platypus import (
+    HRFlowable, ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+)
 
 from core.config import settings
 from schemas.aihub import ChatMessage, GenTxtRequest
@@ -307,6 +310,16 @@ TEMPLATES = {
              "subtitle": "#475569", "date": "#64748b"},
     "olive": {"accent": "#4d7c0f", "name": "#3f6212", "rule": "#d9f99d", "scale": 1.0,
               "subtitle": "#475569", "date": "#64748b"},
+    # Mises en page DISTINCTES (pas juste la couleur).
+    # "band" = en-tête coloré pleine largeur ; "sidebar" = 2 colonnes (barre latérale colorée).
+    "bandeau": {"accent": "#1f4e79", "name": "#1f4e79", "rule": "#1f4e79", "scale": 1.0,
+                "subtitle": "#595959", "date": "#595959", "layout": "band"},
+    "bandeau_emeraude": {"accent": "#047857", "name": "#065f46", "rule": "#a7f3d0", "scale": 1.0,
+                         "subtitle": "#475569", "date": "#64748b", "layout": "band"},
+    "deuxcol": {"accent": "#1f4e79", "name": "#1f4e79", "rule": "#bfdbfe", "scale": 1.0,
+                "subtitle": "#475569", "date": "#64748b", "layout": "sidebar"},
+    "deuxcol_violet": {"accent": "#6d28d9", "name": "#6d28d9", "rule": "#ddd6fe", "scale": 1.0,
+                       "subtitle": "#475569", "date": "#64748b", "layout": "sidebar"},
 }
 DEFAULT_TEMPLATE = "sobre"
 
@@ -344,6 +357,15 @@ CV_TEMPLATE_META = [
      "accent": "#4d7c0f", "rule": "#d9f99d", "serif": False, "compact": False},
     {"key": "compact", "label": "Compact", "description": "Plus dense, gagne de la place",
      "accent": "#111111", "rule": "#cccccc", "serif": False, "compact": True},
+    # Mises en page distinctes (vraiment différentes, pas juste la couleur).
+    {"key": "bandeau", "label": "Bandeau bleu", "description": "En-tête coloré pleine largeur — moderne",
+     "accent": "#1f4e79", "rule": "#1f4e79", "serif": False, "compact": False, "layout": "band"},
+    {"key": "bandeau_emeraude", "label": "Bandeau vert", "description": "En-tête coloré vert — moderne",
+     "accent": "#047857", "rule": "#a7f3d0", "serif": False, "compact": False, "layout": "band"},
+    {"key": "deuxcol", "label": "Deux colonnes", "description": "Barre latérale colorée — style moderne (moins ATS)",
+     "accent": "#1f4e79", "rule": "#bfdbfe", "serif": False, "compact": False, "layout": "sidebar"},
+    {"key": "deuxcol_violet", "label": "Deux colonnes violet", "description": "Barre latérale violette — moderne (moins ATS)",
+     "accent": "#6d28d9", "rule": "#ddd6fe", "serif": False, "compact": False, "layout": "sidebar"},
 ]
 
 _FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
@@ -444,42 +466,68 @@ def _classify_exp_line(line: str) -> str:
     return "bullet"
 
 
-def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
-    """Génère le PDF ATS et renvoie ses octets."""
-    tpl = _template(template)
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf, pagesize=A4,
-        leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
-        title="CV - %s" % content.get("full_name", ""),
-    )
-    st = _styles(tpl)
-    flow: List[Any] = []
+def _bullets(lines: List[str], st) -> List[Any]:
+    if not lines:
+        return []
+    items = [ListItem(Paragraph(_esc(b), st["bullet"]), leftIndent=8) for b in lines]
+    return [ListFlowable(items, bulletType="bullet", start="•", leftIndent=10)]
 
-    # En-tête
-    flow.append(Paragraph(_esc(content["full_name"]), st["name"]))
-    if content.get("target_title"):
-        flow.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
-    c = content["contact"]
-    contact_line = "  •  ".join(x for x in [c.get("email"), c.get("phone"), c.get("location")] if x)
-    if contact_line:
-        flow.append(Paragraph(_esc(contact_line), st["contact"]))
-    flow.append(HRFlowable(width="100%", thickness=0.8, color=tpl["rule"], spaceAfter=4))
 
-    def section(title: str):
-        flow.append(Paragraph(title.upper(), st["section"]))
+def _sec(title: str, st) -> Paragraph:
+    return Paragraph(title.upper(), st["section"])
 
-    # Accroche
-    if content.get("summary"):
-        section("Profil")
-        flow.append(Paragraph(_esc(content["summary"]), st["body"]))
 
-    # Compétences
-    if content.get("skills"):
-        section("Compétences clés")
-        flow.append(Paragraph(_esc(" • ".join(content["skills"][:18])), st["body"]))
+def _f_summary(content, st) -> List[Any]:
+    if not content.get("summary"):
+        return []
+    return [_sec("Profil", st), Paragraph(_esc(content["summary"]), st["body"])]
 
-    # Expérience professionnelle
+
+def _f_skills(content, st, limit: int = 18) -> List[Any]:
+    if not content.get("skills"):
+        return []
+    return [_sec("Compétences clés", st), Paragraph(_esc(" • ".join(content["skills"][:limit])), st["body"])]
+
+
+def _f_languages(content, st) -> List[Any]:
+    if not content.get("languages"):
+        return []
+    return [_sec("Langues", st), Paragraph(_esc(" • ".join(content["languages"])), st["body"])]
+
+
+def _f_certifications(content, st, as_bullets: bool = True) -> List[Any]:
+    certs = content.get("certifications") or []
+    if not certs:
+        return []
+    out: List[Any] = [_sec("Certifications", st)]
+    if as_bullets:
+        out += _bullets(list(certs), st)
+    else:
+        # Variante sans ListFlowable (puce manuelle) — lisible sur fond coloré.
+        out += [Paragraph("• " + _esc(c), st["body"]) for c in certs]
+    return out
+
+
+def _f_keywords(content, st) -> List[Any]:
+    if not content.get("ats_keywords"):
+        return []
+    return [_sec("Mots-clés", st), Paragraph(_esc(", ".join(content["ats_keywords"])), st["body"])]
+
+
+def _f_education(content, st) -> List[Any]:
+    if not content.get("education"):
+        return []
+    out: List[Any] = [_sec("Formation", st)]
+    edu_lines = [l.strip(" \t-•*–·").strip() for l in str(content["education"]).splitlines()]
+    edu_lines = [l for l in edu_lines if l]
+    if len(edu_lines) > 1:
+        out += _bullets(edu_lines[:8], st)
+    else:
+        out.append(Paragraph(_esc(content["education"]), st["body"]))
+    return out
+
+
+def _f_experience(content, st) -> List[Any]:
     exp_bits = []
     if content.get("current_title"):
         exp_bits.append(content["current_title"])
@@ -488,69 +536,151 @@ def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
     if content.get("experience_years"):
         exp_bits.append("%s an(s) d'expérience" % content["experience_years"])
     experience_entries = content.get("experience_entries") or []
-    if exp_bits or experience_entries:
-        section("Expérience professionnelle")
-        if exp_bits:
-            flow.append(Paragraph("<b>%s</b>" % _esc(" — ".join(exp_bits)), st["body"]))
-        if experience_entries:
-            # Contenu réel issu du CV uploadé : employeur en gras, dates en italique
-            # gris, descriptions en puces (proche de la mise en page d'un vrai CV).
-            bullet_buffer: List[str] = []
+    if not (exp_bits or experience_entries):
+        return []
+    out: List[Any] = [_sec("Expérience professionnelle", st)]
+    if exp_bits:
+        out.append(Paragraph("<b>%s</b>" % _esc(" — ".join(exp_bits)), st["body"]))
+    if experience_entries:
+        buffer: List[str] = []
+        for line in experience_entries:
+            kind = _classify_exp_line(line)
+            if kind == "header":
+                out += _bullets(buffer, st); buffer = []
+                out.append(Paragraph("<b>%s</b>" % _esc(line), st["exp_header"]))
+            elif kind == "date":
+                out += _bullets(buffer, st); buffer = []
+                out.append(Paragraph(_esc(line), st["exp_date"]))
+            else:
+                buffer.append(line)
+        out += _bullets(buffer, st)
+    else:
+        out += _bullets([
+            "Réalisations et responsabilités en lien avec le poste visé : [à compléter].",
+            "Résultats quantifiés (chiffres, %, délais) : [à compléter].",
+        ], st)
+    return out
 
-            def _flush_bullets():
-                if bullet_buffer:
-                    items = [ListItem(Paragraph(_esc(b), st["bullet"]), leftIndent=8) for b in bullet_buffer]
-                    flow.append(ListFlowable(items, bulletType="bullet", start="•", leftIndent=10))
-                    bullet_buffer.clear()
 
-            for line in experience_entries:
-                kind = _classify_exp_line(line)
-                if kind == "header":
-                    _flush_bullets()
-                    flow.append(Paragraph("<b>%s</b>" % _esc(line), st["exp_header"]))
-                elif kind == "date":
-                    _flush_bullets()
-                    flow.append(Paragraph(_esc(line), st["exp_date"]))
-                else:
-                    bullet_buffer.append(line)
-            _flush_bullets()
-        else:
-            # Pas de section "Expérience" détectée dans le CV → invites à compléter.
-            items = [
-                ListItem(Paragraph(_esc(b), st["bullet"]), leftIndent=8)
-                for b in [
-                    "Réalisations et responsabilités en lien avec le poste visé : [à compléter].",
-                    "Résultats quantifiés (chiffres, %, délais) : [à compléter].",
-                ]
-            ]
-            flow.append(ListFlowable(items, bulletType="bullet", start="•", leftIndent=10))
+def _white_styles(tpl):
+    """Styles clairs (texte blanc) pour la barre latérale colorée."""
+    base = getSampleStyleSheet()
+    s = tpl.get("scale", 1.0)
+    f = _fonts(tpl)
+    light = colors.HexColor("#eef2f7")
+    return {
+        "name": ParagraphStyle("sname", parent=base["Title"], fontName=f["bold"],
+                               fontSize=16 * s, leading=19 * s, textColor=colors.white,
+                               alignment=TA_LEFT, spaceAfter=2),
+        "title": ParagraphStyle("stitle", parent=base["Normal"], fontName=f["regular"],
+                                fontSize=9.5 * s, leading=13 * s, textColor=light, spaceAfter=4),
+        "section": ParagraphStyle("ssection", parent=base["Heading2"], fontName=f["bold"],
+                                  fontSize=10 * s, leading=13 * s, textColor=colors.white,
+                                  spaceBefore=10 * s, spaceAfter=3),
+        "body": ParagraphStyle("sbody", parent=base["Normal"], fontName=f["regular"],
+                               fontSize=9 * s, leading=12.5 * s, textColor=light, spaceAfter=2),
+        "bullet": ParagraphStyle("sbullet", parent=base["Normal"], fontName=f["regular"],
+                                 fontSize=9 * s, leading=12.5 * s, textColor=light),
+    }
 
-    # Formation
-    if content.get("education"):
-        section("Formation")
-        edu_lines = [l.strip(" \t-•*–·").strip() for l in str(content["education"]).splitlines()]
-        edu_lines = [l for l in edu_lines if l]
-        if len(edu_lines) > 1:
-            items = [ListItem(Paragraph(_esc(l), st["bullet"]), leftIndent=8) for l in edu_lines[:8]]
-            flow.append(ListFlowable(items, bulletType="bullet", start="•", leftIndent=10))
-        else:
-            flow.append(Paragraph(_esc(content["education"]), st["body"]))
 
-    # Certifications
-    if content.get("certifications"):
-        section("Certifications")
-        items = [ListItem(Paragraph(_esc(b), st["bullet"]), leftIndent=8) for b in content["certifications"]]
-        flow.append(ListFlowable(items, bulletType="bullet", start="•", leftIndent=10))
+def _band_header(content, tpl, st, width) -> List[Any]:
+    """En-tête coloré pleine largeur (nom + titre + contact en blanc)."""
+    light = colors.HexColor("#e8eef5")
+    name_st = ParagraphStyle("bname", parent=st["name"], textColor=colors.white)
+    title_st = ParagraphStyle("btitle", parent=st["title"], textColor=light)
+    cont_st = ParagraphStyle("bcontact", parent=st["contact"], textColor=light)
+    inner: List[Any] = [Paragraph(_esc(content["full_name"]), name_st)]
+    if content.get("target_title"):
+        inner.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), title_st))
+    c = content["contact"]
+    contact_line = "  •  ".join(x for x in [c.get("email"), c.get("phone"), c.get("location")] if x)
+    if contact_line:
+        inner.append(Paragraph(_esc(contact_line), cont_st))
+    t = Table([[inner]], colWidths=[width])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(tpl["accent"])),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12), ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("TOPPADDING", (0, 0), (-1, -1), 12), ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    return [t, Spacer(1, 8)]
 
-    # Langues
-    if content.get("languages"):
-        section("Langues")
-        flow.append(Paragraph(_esc(" • ".join(content["languages"])), st["body"]))
 
-    # Mots-clés ATS
-    if content.get("ats_keywords"):
-        section("Mots-clés")
-        flow.append(Paragraph(_esc(", ".join(content["ats_keywords"])), st["body"]))
+def _build_sidebar_flow(content, tpl, st, width) -> List[Any]:
+    """Mise en page 2 colonnes : barre latérale colorée + colonne principale."""
+    wst = _white_styles(tpl)
+    c = content["contact"]
+    side: List[Any] = [Paragraph(_esc(content["full_name"]), wst["name"])]
+    if content.get("target_title"):
+        side.append(Paragraph(_esc(content["target_title"]), wst["title"]))
+    contact_items = [x for x in [c.get("email"), c.get("phone"), c.get("location")] if x]
+    if contact_items:
+        side.append(_sec("Contact", wst))
+        for it in contact_items:
+            side.append(Paragraph(_esc(it), wst["body"]))
+    side += _f_skills(content, wst, limit=16)
+    side += _f_languages(content, wst)
+    side += _f_certifications(content, wst, as_bullets=False)
+
+    main: List[Any] = []
+    if content.get("target_title"):
+        main.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
+    main += _f_summary(content, st)
+    main += _f_experience(content, st)
+    main += _f_education(content, st)
+    main += _f_keywords(content, st)
+
+    side_w = 62 * mm
+    main_w = width - side_w
+    t = Table([[side, main]], colWidths=[side_w, main_w])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor(tpl["accent"])),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (0, 0), 10), ("RIGHTPADDING", (0, 0), (0, 0), 10),
+        ("TOPPADDING", (0, 0), (0, 0), 14), ("BOTTOMPADDING", (0, 0), (0, 0), 14),
+        ("LEFTPADDING", (1, 0), (1, 0), 12), ("RIGHTPADDING", (1, 0), (1, 0), 2),
+        ("TOPPADDING", (1, 0), (1, 0), 2), ("BOTTOMPADDING", (1, 0), (1, 0), 2),
+    ]))
+    return [t]
+
+
+def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
+    """Génère le PDF du CV et renvoie ses octets.
+
+    Trois mises en page selon le modèle : 'mono' (mono-colonne ATS, défaut),
+    'band' (en-tête coloré pleine largeur) et 'sidebar' (2 colonnes).
+    """
+    tpl = _template(template)
+    layout = tpl.get("layout", "mono")
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=16 * mm, rightMargin=16 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
+        title="CV - %s" % content.get("full_name", ""),
+    )
+    st = _styles(tpl)
+    flow: List[Any] = []
+
+    if layout == "sidebar":
+        flow += _build_sidebar_flow(content, tpl, st, doc.width)
+    elif layout == "band":
+        flow += _band_header(content, tpl, st, doc.width)
+        for fn in (_f_summary, _f_skills, _f_experience, _f_education,
+                   _f_certifications, _f_languages, _f_keywords):
+            flow += fn(content, st)
+    else:
+        flow.append(Paragraph(_esc(content["full_name"]), st["name"]))
+        if content.get("target_title"):
+            flow.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
+        c = content["contact"]
+        contact_line = "  •  ".join(x for x in [c.get("email"), c.get("phone"), c.get("location")] if x)
+        if contact_line:
+            flow.append(Paragraph(_esc(contact_line), st["contact"]))
+        flow.append(HRFlowable(width="100%", thickness=0.8, color=tpl["rule"], spaceAfter=4))
+        for fn in (_f_summary, _f_skills, _f_experience, _f_education,
+                   _f_certifications, _f_languages, _f_keywords):
+            flow += fn(content, st)
 
     doc.build(flow)
     return buf.getvalue()
