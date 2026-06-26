@@ -808,6 +808,12 @@ export function useCourseAccess(slug: string, enabled = true) {
   return useQuery({
     queryKey: ['course_access', slug],
     enabled: enabled && !!slug,
+    // Toujours frais + on re-vérifie périodiquement : la page « en attente » se
+    // débloque automatiquement dès que l'admin valide le paiement (sans rechargement).
+    staleTime: 0,
+    refetchInterval: 12_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     queryFn: async (): Promise<CourseAccess> => {
       const res = await client.apiCall.invoke({ url: `/api/v1/course-access/${slug}/status`, method: 'GET' });
       return (res?.data ?? res) as CourseAccess;
