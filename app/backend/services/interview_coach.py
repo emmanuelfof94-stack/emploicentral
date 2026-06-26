@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 from core.config import settings
 from schemas.aihub import ChatMessage, GenTxtRequest
-from services.aihub import AIHubService
+from services.aihub import AIHubService, default_text_model
 from services.cv_generator import _split_skills, match_profile_to_job
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ async def _generate_ai(profile: Dict[str, Any], job: Dict[str, Any], matched: Li
             ),
             ChatMessage(role="user", content=_ai_instruction(profile, job, matched, missing)),
         ],
-        model="deepseek-v4-pro",
+        model=default_text_model(),
         temperature=0.6,
         max_tokens=2200,
     )
