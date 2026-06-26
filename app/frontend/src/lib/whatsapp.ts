@@ -3,7 +3,7 @@
 // Renseigne ici le numéro WhatsApp du support au format INTERNATIONAL, sans '+',
 // sans espaces (ex. Côte d'Ivoire : "2250700000000"). Laisser vide ('') masque
 // automatiquement le bouton de contact flottant.
-export const SUPPORT_WHATSAPP = '';
+export const SUPPORT_WHATSAPP = '2250749109013';
 
 /** Lien wa.me pour CONTACTER le support EmploiCentral (message prérempli). */
 export function waContactUrl(
