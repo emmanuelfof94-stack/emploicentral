@@ -69,6 +69,49 @@ SOURCES: List[Dict[str, object]] = [
         "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
         "paginate": True,
     },
+    # Sites jumeaux du même réseau « Emploi.XX » (structure identique à Emploi.ci/.sn)
+    # → le parser JSON-LD par défaut fonctionne tel quel. Élargit à l'Afrique de l'Ouest.
+    # Résilient : un domaine/slug introuvable renvoie simplement 0 offre (log warning).
+    {
+        "name": "Emploi.bf",
+        "base": "https://www.emploi.bf",
+        "listing_path": "/recherche-jobs-burkina-faso",
+        "offer_re": re.compile(r"/offre-emploi-burkina-faso/[a-z0-9-]+", re.I),
+        "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
+        "paginate": True,
+    },
+    {
+        "name": "Emploi.ml",
+        "base": "https://www.emploi.ml",
+        "listing_path": "/recherche-jobs-mali",
+        "offer_re": re.compile(r"/offre-emploi-mali/[a-z0-9-]+", re.I),
+        "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
+        "paginate": True,
+    },
+    {
+        "name": "Emploi.tg",
+        "base": "https://www.emploi.tg",
+        "listing_path": "/recherche-jobs-togo",
+        "offer_re": re.compile(r"/offre-emploi-togo/[a-z0-9-]+", re.I),
+        "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
+        "paginate": True,
+    },
+    {
+        "name": "Emploi.bj",
+        "base": "https://www.emploi.bj",
+        "listing_path": "/recherche-jobs-benin",
+        "offer_re": re.compile(r"/offre-emploi-benin/[a-z0-9-]+", re.I),
+        "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
+        "paginate": True,
+    },
+    {
+        "name": "Emploi.gn",
+        "base": "https://www.emploi.gn",
+        "listing_path": "/recherche-jobs-guinee",
+        "offer_re": re.compile(r"/offre-emploi-guinee/[a-z0-9-]+", re.I),
+        "id_re": re.compile(r"-(\d+)(?:[/?#]|$)"),
+        "paginate": True,
+    },
     {
         "name": "Novojob",
         "base": "https://www.novojob.com",

@@ -31,9 +31,9 @@ services:
       - key: AGGREGATOR_INTERVAL_MINUTES
         value: "360"
       - key: AGGREGATOR_PAGES
-        value: "4"
+        value: "6"
       - key: AGGREGATOR_MAX_PER_RUN
-        value: "40"
+        value: "60"
       # Sur Render gratuit l'app s'endort : on relance une agrégation à chaque réveil
       # (tâche de fond ~15s après le démarrage, non bloquante).
       - key: AGGREGATOR_RUN_ON_STARTUP
