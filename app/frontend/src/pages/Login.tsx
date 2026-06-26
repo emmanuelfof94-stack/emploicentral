@@ -225,6 +225,13 @@ export default function Login() {
                 </>
               )}
             </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-100 text-center text-xs text-slate-500">
+              Vous recrutez ?{' '}
+              <a href="/recruiter/signup" className="text-blue-600 font-medium hover:underline">
+                Créer un compte recruteur
+              </a>
+            </div>
           </CardContent>
         </Card>
       </main>

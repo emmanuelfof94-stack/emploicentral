@@ -16,6 +16,7 @@ import {
   Building2,
   Library,
   Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotificationsBell from './NotificationsBell';
@@ -43,8 +44,14 @@ export default function Navbar() {
           ...navLinks,
           { to: '/admin', label: 'Admin', icon: Shield },
           { to: '/admin/users', label: 'Utilisateurs', icon: Users },
+          { to: '/admin/moderation', label: 'Modération', icon: ShieldCheck },
           { to: '/admin/partners', label: 'Partenaires', icon: Building2 },
           { to: '/admin/courses', label: 'Catalogue', icon: Library },
+        ]
+      : user?.role === 'recruiter'
+      ? [
+          { to: '/recruiter', label: 'Espace recruteur', icon: Building2 },
+          { to: '/profile', label: 'Profil', icon: User },
         ]
       : navLinks;
 

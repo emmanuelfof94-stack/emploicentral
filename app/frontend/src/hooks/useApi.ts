@@ -635,6 +635,135 @@ export function useInterviewPrep() {
   };
 }
 
+// ---- Espace recruteur ----
+export interface RecruiterJob {
+  job_id: number;
+  posting_id: number;
+  title: string;
+  company?: string;
+  location?: string;
+  contract_type?: string;
+  status: string; // pending / approved / rejected
+  is_active?: boolean;
+  reject_reason?: string;
+  applicants?: number;
+  saves?: number;
+  created_at?: string;
+}
+
+export interface RecruiterJobInput {
+  title: string;
+  company?: string;
+  location?: string;
+  contract_type?: string;
+  sector?: string;
+  description?: string;
+  requirements?: string;
+  salary_range?: string;
+  valid_through?: string;
+}
+
+export interface RecruiterCandidate {
+  user_id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  job_title?: string;
+  status?: string;
+  saved?: boolean;
+  cv_analyzed?: boolean;
+}
+
+export function useRecruiterJobs(enabled = true) {
+  return useQuery({
+    queryKey: ['recruiter_jobs'],
+    enabled,
+    queryFn: async (): Promise<RecruiterJob[]> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/recruiter/jobs', method: 'GET' });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as RecruiterJob[];
+    },
+  });
+}
+
+export function useRecruiterJobActions() {
+  const invalidate = useInvalidate();
+  const create = async (data: RecruiterJobInput) => {
+    const res = await client.apiCall.invoke({ url: '/api/v1/recruiter/jobs', method: 'POST', data });
+    await invalidate('recruiter_jobs');
+    return (res?.data ?? res) as RecruiterJob;
+  };
+  const update = async (jobId: number, data: Partial<RecruiterJobInput>) => {
+    const res = await client.apiCall.invoke({ url: `/api/v1/recruiter/jobs/${jobId}`, method: 'PUT', data });
+    await invalidate('recruiter_jobs');
+    return (res?.data ?? res) as RecruiterJob;
+  };
+  const remove = async (jobId: number) => {
+    await client.apiCall.invoke({ url: `/api/v1/recruiter/jobs/${jobId}`, method: 'DELETE' });
+    await invalidate('recruiter_jobs');
+  };
+  return { create, update, remove };
+}
+
+export function useJobCandidates(jobId?: number, enabled = true) {
+  return useQuery({
+    queryKey: ['recruiter_candidates', jobId],
+    enabled: enabled && !!jobId,
+    queryFn: async (): Promise<RecruiterCandidate[]> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/recruiter/jobs/${jobId}/candidates`,
+        method: 'GET',
+      });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as RecruiterCandidate[];
+    },
+  });
+}
+
+// ---- Admin : modération des offres recruteur ----
+export interface PendingPosting {
+  posting_id: number;
+  job_id: number;
+  title: string;
+  company?: string;
+  location?: string;
+  sector?: string;
+  description?: string;
+  requirements?: string;
+  recruiter_email?: string;
+  created_at?: string;
+}
+
+export function usePendingPostings(enabled = true) {
+  return useQuery({
+    queryKey: ['recruiter_pending'],
+    enabled,
+    queryFn: async (): Promise<PendingPosting[]> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/recruiter/admin/pending', method: 'GET' });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : body?.items ?? []) as PendingPosting[];
+    },
+  });
+}
+
+export function useModerationActions() {
+  const invalidate = useInvalidate();
+  const approve = async (postingId: number) => {
+    await client.apiCall.invoke({ url: `/api/v1/recruiter/admin/${postingId}/approve`, method: 'POST', data: {} });
+    await invalidate('recruiter_pending');
+  };
+  const reject = async (postingId: number, reason?: string) => {
+    await client.apiCall.invoke({
+      url: `/api/v1/recruiter/admin/${postingId}/reject`,
+      method: 'POST',
+      data: { reason: reason || '' },
+    });
+    await invalidate('recruiter_pending');
+  };
+  return { approve, reject };
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

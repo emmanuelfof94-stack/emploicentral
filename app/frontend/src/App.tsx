@@ -20,6 +20,10 @@ import AdminAnalytics from './pages/AdminAnalytics';
 import AdminTrainingPartners from './pages/AdminTrainingPartners';
 import AdminTrainingCourses from './pages/AdminTrainingCourses';
 import AdminUsers from './pages/AdminUsers';
+import AdminModeration from './pages/AdminModeration';
+import Recruiter from './pages/Recruiter';
+import RecruiterSignup from './pages/RecruiterSignup';
+import ProtectedRecruiterRoute from './components/ProtectedRecruiterRoute';
 import Alerts from './pages/Alerts';
 import Trainings from './pages/Trainings';
 import AuthCallback from './pages/AuthCallback';
@@ -51,6 +55,9 @@ const AppRoutes = () => (
     <Route path="/trainings" element={<ProtectedRoute><Trainings /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
+    <Route path="/admin/moderation" element={<ProtectedAdminRoute><AdminModeration /></ProtectedAdminRoute>} />
+    <Route path="/recruiter/signup" element={<RecruiterSignup />} />
+    <Route path="/recruiter" element={<ProtectedRecruiterRoute><Recruiter /></ProtectedRecruiterRoute>} />
     <Route path="/admin/partners" element={<ProtectedAdminRoute><AdminTrainingPartners /></ProtectedAdminRoute>} />
     <Route path="/admin/courses" element={<ProtectedAdminRoute><AdminTrainingCourses /></ProtectedAdminRoute>} />
     <Route path="/auth/callback" element={<AuthCallback />} />
