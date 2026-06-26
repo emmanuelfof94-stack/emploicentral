@@ -616,6 +616,25 @@ export function useSkillGap(profileId?: number, jobId?: number, enabled = true) 
   });
 }
 
+// ---- Coach d'entretien IA ----
+export interface InterviewPrep {
+  prep: string; // Markdown
+  ai_generated: boolean;
+}
+
+// Génération à la demande (POST) → on renvoie une fonction plutôt qu'un useQuery.
+export function useInterviewPrep() {
+  return async (profileId: number, jobId: number): Promise<InterviewPrep> => {
+    const res = await client.apiCall.invoke({
+      url: '/api/v1/jobs/interview-prep',
+      method: 'POST',
+      data: { profile_id: profileId, job_id: jobId },
+    });
+    const body = res?.data ?? res;
+    return { prep: body?.prep ?? '', ai_generated: !!body?.ai_generated };
+  };
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

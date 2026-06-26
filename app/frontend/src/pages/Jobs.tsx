@@ -7,9 +7,11 @@ import {
   useUserJobs,
   useUserJobActions,
   useCvTemplates,
+  useInterviewPrep,
   type Job,
   type UserJob,
 } from '../hooks/useApi';
+import Markdown from 'markdown-to-jsx';
 import CvTemplateGallery from '../components/CvTemplateGallery';
 import SkillGapBlock from '../components/SkillGapBlock';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette, MessageCircle } from 'lucide-react';
+import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette, MessageCircle, Mic, Sparkles } from 'lucide-react';
 import { waShareUrl } from '../lib/whatsapp';
 
 interface ScoreItem {
@@ -106,6 +108,28 @@ export default function Jobs() {
   const [tplOpen, setTplOpen] = useState(false);
   const { data: cvTemplates } = useCvTemplates();
   const currentTpl = cvTemplates?.find((t) => t.key === cvTemplate);
+
+  // Coach d'entretien IA
+  const runInterviewPrep = useInterviewPrep();
+  const [generatingPrep, setGeneratingPrep] = useState(false);
+  const [prepOpen, setPrepOpen] = useState(false);
+  const [prepContent, setPrepContent] = useState('');
+  const [prepAi, setPrepAi] = useState(false);
+
+  const handleInterviewPrep = async (job: Job) => {
+    if (!profile?.id) return;
+    setGeneratingPrep(true);
+    try {
+      const r = await runInterviewPrep(profile.id, job.id);
+      setPrepContent(r.prep);
+      setPrepAi(r.ai_generated);
+      setPrepOpen(true);
+    } catch {
+      toast.error("Échec de la préparation d'entretien. Réessayez.");
+    } finally {
+      setGeneratingPrep(false);
+    }
+  };
 
   // Télécharge un PDF depuis un endpoint authentifié (fetch direct = gestion du binaire ;
   // le web-sdk lit le JWT dans localStorage).
@@ -651,6 +675,19 @@ export default function Jobs() {
                           {generatingLetter ? 'Génération…' : 'Lettre de motivation'}
                         </Button>
                       </div>
+                      <Button
+                        onClick={() => handleInterviewPrep(selectedJob)}
+                        disabled={generatingPrep}
+                        variant="outline"
+                        className="w-full border-violet-300 text-violet-700 hover:bg-violet-50"
+                      >
+                        {generatingPrep ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Mic className="w-4 h-4 mr-2" />
+                        )}
+                        {generatingPrep ? 'Préparation…' : "Préparer l'entretien"}
+                      </Button>
                       <p className="text-xs text-slate-400 text-center">
                         PDF optimisés ATS, adaptés à cette offre.
                       </p>
@@ -663,6 +700,26 @@ export default function Jobs() {
                 </div>
               </>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Coach d'entretien : résultat */}
+        <Dialog open={prepOpen} onOpenChange={setPrepOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mic className="w-5 h-5 text-violet-600" />
+                Préparation à l'entretien
+                {prepAi && (
+                  <span className="inline-flex items-center gap-1 text-xs font-normal text-violet-600">
+                    <Sparkles className="w-3.5 h-3.5" /> IA
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <Markdown>{prepContent}</Markdown>
+            </div>
           </DialogContent>
         </Dialog>
       </main>

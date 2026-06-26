@@ -322,6 +322,54 @@ async def issue_download_token(current_user: UserResponse = Depends(get_current_
     return {"token": download_tokens.issue(str(current_user.id))}
 
 
+class InterviewPrepResponse(BaseModel):
+    """Préparation d'entretien (Markdown) pour une offre."""
+    prep: str
+    ai_generated: bool
+
+
+@router.post("/interview-prep", response_model=InterviewPrepResponse)
+async def interview_prep(
+    data: CompatibilityScoreRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Génère une préparation d'entretien personnalisée (IA si dispo, sinon locale)."""
+    from services import interview_coach
+
+    profile = (await db.execute(
+        select(User_profiles).where(
+            User_profiles.id == data.profile_id,
+            User_profiles.user_id == str(current_user.id),
+        )
+    )).scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profil introuvable.")
+
+    job = (await db.execute(select(Job_offers).where(Job_offers.id == data.job_id))).scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Offre introuvable.")
+
+    profile_data = {
+        "skills": profile.skills,
+        "experience_years": profile.experience_years,
+        "education": profile.education,
+        "sector": profile.sector,
+        "job_title": profile.job_title,
+    }
+    job_data = {
+        "title": job.title,
+        "company": job.company,
+        "sector": job.sector,
+        "requirements": job.requirements,
+        "description": job.description,
+    }
+    await db.rollback()  # libère la transaction avant un éventuel appel IA lent
+
+    result = await interview_coach.generate_prep(profile_data, job_data)
+    return InterviewPrepResponse(prep=result["prep"], ai_generated=bool(result["ai_generated"]))
+
+
 class SkillGapResponse(BaseModel):
     """Compétences à acquérir (manquantes) et déjà acquises pour une offre."""
     missing: List[str]
