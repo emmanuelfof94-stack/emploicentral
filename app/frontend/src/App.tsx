@@ -26,6 +26,8 @@ import RecruiterSignup from './pages/RecruiterSignup';
 import ProtectedRecruiterRoute from './components/ProtectedRecruiterRoute';
 import Alerts from './pages/Alerts';
 import Trainings from './pages/Trainings';
+import CourseAccess from './pages/CourseAccess';
+import AdminCoursePurchases from './pages/AdminCoursePurchases';
 import MarketTrends from './pages/MarketTrends';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
@@ -54,6 +56,7 @@ const AppRoutes = () => (
     <Route path="/account/password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
     <Route path="/trainings" element={<ProtectedRoute><Trainings /></ProtectedRoute>} />
+    <Route path="/cours/:slug" element={<ProtectedRoute><CourseAccess /></ProtectedRoute>} />
     <Route path="/market" element={<ProtectedRoute><MarketTrends /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
@@ -62,6 +65,7 @@ const AppRoutes = () => (
     <Route path="/recruiter" element={<ProtectedRecruiterRoute><Recruiter /></ProtectedRecruiterRoute>} />
     <Route path="/admin/partners" element={<ProtectedAdminRoute><AdminTrainingPartners /></ProtectedAdminRoute>} />
     <Route path="/admin/courses" element={<ProtectedAdminRoute><AdminTrainingCourses /></ProtectedAdminRoute>} />
+    <Route path="/admin/achats" element={<ProtectedAdminRoute><AdminCoursePurchases /></ProtectedAdminRoute>} />
     <Route path="/auth/callback" element={<AuthCallback />} />
     <Route path="/auth/error" element={<AuthError />} />
   </Routes>

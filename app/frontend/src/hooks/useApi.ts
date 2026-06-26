@@ -794,6 +794,79 @@ export function useMarketInsights(enabled = true) {
   });
 }
 
+// ---- Accès payant aux cours (paywall manuel + validation admin) ----
+export interface CourseAccess {
+  slug: string;
+  title: string;
+  price: string;
+  payment_number: string;
+  has_access: boolean;
+  status: 'none' | 'pending' | 'paid' | 'rejected';
+}
+
+export function useCourseAccess(slug: string, enabled = true) {
+  return useQuery({
+    queryKey: ['course_access', slug],
+    enabled: enabled && !!slug,
+    queryFn: async (): Promise<CourseAccess> => {
+      const res = await client.apiCall.invoke({ url: `/api/v1/course-access/${slug}/status`, method: 'GET' });
+      return (res?.data ?? res) as CourseAccess;
+    },
+  });
+}
+
+export function useCourseAccessActions() {
+  const invalidate = useInvalidate();
+  const requestAccess = async (slug: string, paymentRef: string) => {
+    const res = await client.apiCall.invoke({
+      url: `/api/v1/course-access/${slug}/request`,
+      method: 'POST',
+      data: { payment_ref: paymentRef },
+    });
+    await invalidate('course_access');
+    return (res?.data ?? res) as CourseAccess;
+  };
+  return { requestAccess };
+}
+
+export interface AdminPurchase {
+  id: number;
+  user_id: string;
+  user_email?: string;
+  course_slug: string;
+  course_title?: string;
+  status: string;
+  payment_ref?: string;
+  amount?: string;
+  created_at?: string;
+}
+
+export function useAdminPurchases(enabled = true) {
+  return useQuery({
+    queryKey: ['admin_purchases'],
+    enabled,
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<AdminPurchase[]> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/course-access/admin/purchases', method: 'GET' });
+      const body = res?.data ?? res;
+      return (Array.isArray(body) ? body : []) as AdminPurchase[];
+    },
+  });
+}
+
+export function useAdminPurchaseActions() {
+  const invalidate = useInvalidate();
+  const validate = async (id: number) => {
+    await client.apiCall.invoke({ url: `/api/v1/course-access/admin/purchases/${id}/validate`, method: 'POST', data: {} });
+    await invalidate('admin_purchases');
+  };
+  const reject = async (id: number) => {
+    await client.apiCall.invoke({ url: `/api/v1/course-access/admin/purchases/${id}/reject`, method: 'POST', data: {} });
+    await invalidate('admin_purchases');
+  };
+  return { validate, reject };
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Building2,
   Library,
+  CreditCard,
   Users,
   ShieldCheck,
   TrendingUp,
@@ -49,6 +50,7 @@ export default function Navbar() {
           { to: '/admin/moderation', label: 'Modération', icon: ShieldCheck },
           { to: '/admin/partners', label: 'Partenaires', icon: Building2 },
           { to: '/admin/courses', label: 'Catalogue', icon: Library },
+          { to: '/admin/achats', label: 'Achats', icon: CreditCard },
         ]
       : user?.role === 'recruiter'
       ? [

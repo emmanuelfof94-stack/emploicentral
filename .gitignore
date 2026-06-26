@@ -22,3 +22,6 @@ Plateforme emploi intelligente.zip
 
 # Front buildé copié pour le déploiement tout-en-un (régénéré par Docker)
 app/backend/static/
+
+# PMP = cours PAYANT servi de façon protégée (routers/course_access.py) — NE PAS remettre en public (contournerait le paywall)
+app/frontend/public/courses/pmp-simulation.html
