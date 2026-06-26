@@ -26,6 +26,7 @@ import RecruiterSignup from './pages/RecruiterSignup';
 import ProtectedRecruiterRoute from './components/ProtectedRecruiterRoute';
 import Alerts from './pages/Alerts';
 import Trainings from './pages/Trainings';
+import MarketTrends from './pages/MarketTrends';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
 
@@ -53,6 +54,7 @@ const AppRoutes = () => (
     <Route path="/account/password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
     <Route path="/trainings" element={<ProtectedRoute><Trainings /></ProtectedRoute>} />
+    <Route path="/market" element={<ProtectedRoute><MarketTrends /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
     <Route path="/admin/moderation" element={<ProtectedAdminRoute><AdminModeration /></ProtectedAdminRoute>} />

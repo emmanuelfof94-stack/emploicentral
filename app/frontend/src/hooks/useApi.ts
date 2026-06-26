@@ -764,6 +764,36 @@ export function useModerationActions() {
   return { approve, reject };
 }
 
+// ---- Tendances du marché de l'emploi ----
+export interface CountItem {
+  name: string;
+  count: number;
+}
+export interface MarketInsights {
+  total_active: number;
+  top_sectors: CountItem[];
+  top_skills: CountItem[];
+  top_locations: CountItem[];
+}
+
+export function useMarketInsights(enabled = true) {
+  return useQuery({
+    queryKey: ['market_insights'],
+    enabled,
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<MarketInsights> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/market/insights', method: 'GET' });
+      const body = res?.data ?? res;
+      return {
+        total_active: Number(body?.total_active ?? 0),
+        top_sectors: (body?.top_sectors ?? []) as CountItem[],
+        top_skills: (body?.top_skills ?? []) as CountItem[],
+        top_locations: (body?.top_locations ?? []) as CountItem[],
+      };
+    },
+  });
+}
+
 export function useInvalidate() {
   const qc = useQueryClient();
   return (key: string) => qc.invalidateQueries({ queryKey: [key] });

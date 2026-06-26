@@ -17,6 +17,7 @@ import {
   Library,
   Users,
   ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NotificationsBell from './NotificationsBell';
@@ -28,6 +29,7 @@ const navLinks = [
   { to: '/profile', label: 'Profil', icon: User },
   { to: '/alerts', label: 'Alertes', icon: Bell },
   { to: '/trainings', label: 'Formations', icon: GraduationCap },
+  { to: '/market', label: 'Tendances', icon: TrendingUp },
 ];
 
 export default function Navbar() {
