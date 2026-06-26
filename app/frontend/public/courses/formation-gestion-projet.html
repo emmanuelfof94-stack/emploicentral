@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formation — Gestion de projet (Niveau débutant)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#1F6F78; --primary-light:#2e9aa6; --secondary:#134e54;
+    --success:#059669; --danger:#dc2626; --warning:#c2410c; --info:#0369a1;
+    --bg:#ffffff; --card:#ffffff; --card-border:#dde5e6;
+    --text:#1B2733; --text-muted:#5b6b7b; --radius:16px; --shadow:0 6px 22px rgba(15,40,45,0.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',sans-serif;
+    background:#ffffff;
+    color:var(--text); line-height:1.65; min-height:100vh;
+  }
+  ::selection{background:rgba(31,111,120,0.18)}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 96px}
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:28px;margin-bottom:24px;
+  }
+  h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;line-height:1.2;
+    background:linear-gradient(135deg,#1F6F78,#134e54);-webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;background-clip:text}
+  h2{font-size:1.5rem;font-weight:700;margin:6px 0 14px;display:flex;align-items:center;gap:10px;color:var(--text)}
+  h3{font-size:1.15rem;font-weight:600;color:var(--primary);margin:22px 0 10px}
+  h4{font-size:1rem;font-weight:600;margin:14px 0 6px;color:var(--text)}
+  p{margin-bottom:10px;color:var(--text)}
+  ul,ol{margin:8px 0 12px 22px}
+  li{margin-bottom:6px;color:var(--text)}
+  strong{color:#0f2027;font-weight:600}
+  a{color:var(--primary)}
+  .muted{color:var(--text-muted)}
+  .badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+  .badge.soft{background:rgba(31,111,120,0.10);color:var(--primary);border:1px solid rgba(31,111,120,0.28)}
+  .hero{text-align:center;padding:40px 28px}
+  .hero p{max-width:680px;margin:14px auto 0;color:var(--text-muted)}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+  /* progress */
+  .progress-wrap{margin-top:22px}
+  .bar{height:12px;border-radius:999px;background:#e3eaeb;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,var(--primary),var(--success));transition:width .5s ease}
+  /* nav */
+  nav.modnav{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px;
+    padding:12px;margin:0 -4px 24px;border-radius:14px;
+    background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border:1px solid var(--card-border);box-shadow:0 4px 14px rgba(15,40,45,0.05)}
+  nav.modnav button{flex:1 1 auto;min-width:120px;cursor:pointer;border:1px solid transparent;
+    background:#eef3f3;color:var(--text-muted);padding:10px 12px;border-radius:10px;
+    font-family:inherit;font-weight:600;font-size:.85rem;transition:.2s}
+  nav.modnav button:hover{color:var(--primary);background:rgba(31,111,120,.10)}
+  nav.modnav button.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));border-color:transparent}
+  /* sections */
+  .module{display:none;animation:fade .35s ease}
+  .module.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;
+    padding:3px 10px;border-radius:999px;background:#eef3f3;border:1px solid var(--card-border);color:var(--text-muted)}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:14px 0}
+  .tile{background:#f7fafa;border:1px solid var(--card-border);border-radius:12px;padding:16px}
+  .tile h4{margin-top:0;color:var(--primary)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--card-border);vertical-align:top}
+  th{color:var(--text);background:rgba(31,111,120,.10);font-weight:600}
+  td{color:var(--text)}
+  .callout{border-left:4px solid var(--info);background:rgba(3,105,161,.07);
+    padding:14px 16px;border-radius:0 12px 12px 0;margin:14px 0}
+  .callout.warn{border-color:var(--warning);background:rgba(194,65,12,.07)}
+  .callout.ok{border-color:var(--success);background:rgba(5,150,105,.08)}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:4px}
+  /* exercise */
+  .ex{border:1px solid var(--card-border);border-radius:12px;margin:14px 0;overflow:hidden;background:#fafcfc}
+  .ex .q{padding:16px 18px}
+  .ex .q .tag{font-size:.72rem;font-weight:700;color:var(--warning);letter-spacing:.5px;text-transform:uppercase}
+  .ex .toggle{cursor:pointer;width:100%;text-align:left;border:none;font-family:inherit;
+    background:rgba(5,150,105,.10);color:var(--success);font-weight:600;padding:12px 18px;font-size:.9rem;
+    display:flex;justify-content:space-between;align-items:center}
+  .ex .toggle:hover{background:rgba(5,150,105,.18)}
+  .ex .answer{display:none;padding:16px 18px;border-top:1px solid var(--card-border);background:rgba(5,150,105,.05)}
+  .ex .answer.show{display:block}
+  .check{display:flex;align-items:flex-start;gap:10px;margin:8px 0;cursor:pointer;user-select:none}
+  .check input{margin-top:5px;width:16px;height:16px;accent-color:var(--success);flex:none}
+  /* quiz */
+  .quiz .opt{display:block;cursor:pointer;padding:11px 14px;border:1px solid var(--card-border);
+    border-radius:10px;margin:8px 0;background:#fafcfc;transition:.15s}
+  .quiz .opt:hover{border-color:var(--primary)}
+  .quiz .opt.correct{border-color:var(--success);background:rgba(5,150,105,.14)}
+  .quiz .opt.wrong{border-color:var(--danger);background:rgba(220,38,38,.12)}
+  .quiz .opt input{margin-right:10px;accent-color:var(--primary)}
+  .qfeedback{font-size:.88rem;margin-top:6px;font-weight:600;min-height:1.2em}
+  .btn{cursor:pointer;border:none;font-family:inherit;font-weight:600;border-radius:10px;
+    padding:10px 18px;font-size:.9rem;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .btn.ghost{background:#eef3f3;border:1px solid var(--card-border);color:var(--text)}
+  .foot{text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px}
+  .kpi{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .kpi div{text-align:center}
+  .kpi b{display:block;font-size:1.6rem;color:var(--primary)}
+  details.gloss{border:1px solid var(--card-border);border-radius:10px;padding:0 14px;margin:8px 0;background:#fafcfc}
+  details.gloss summary{cursor:pointer;padding:12px 0;font-weight:600;color:var(--primary)}
+  details.gloss p{padding-bottom:12px}
+  @media(max-width:560px){.wrap{padding:18px 12px 80px}.card{padding:20px}}
+  /* toolbox / templates */
+  .toolgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:14px 0}
+  .dlbtn{cursor:pointer;text-align:left;border:1px solid var(--card-border);border-radius:12px;
+    padding:14px 16px;background:#f7fafa;color:var(--text);font-family:inherit;transition:.18s}
+  .dlbtn:hover{border-color:var(--primary);background:rgba(31,111,120,.07)}
+  .dlbtn b{display:block;color:var(--text);font-size:.95rem}
+  .dlbtn span{font-size:.78rem;color:var(--text-muted)}
+  /* interactive gantt builder */
+  .gb{margin:14px 0;overflow-x:auto}
+  .gb table{font-size:.85rem}
+  .gb td.cell{cursor:pointer;text-align:center;min-width:34px;background:#f7fafa;transition:.1s;user-select:none}
+  .gb td.cell:hover{background:rgba(31,111,120,.15)}
+  .gb td.cell.on{background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .gb input.tname{width:100%;min-width:150px;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:.85rem;padding:6px 4px}
+  .gb input.tname:focus{outline:1px solid var(--primary);border-radius:6px}
+  .gb .del{cursor:pointer;color:var(--danger);background:none;border:none;font-size:1rem;padding:0 6px}
+  /* PRINT / PDF */
+  @media print{
+    body{background:#fff !important;color:#111}
+    .wrap{max-width:100%;padding:0}
+    nav.modnav,.btn,.dlbtn,.ex .toggle,#resetBtn,.toolgrid{display:none !important}
+    .module{display:block !important;page-break-after:always}
+    .card{box-shadow:none;border:1px solid #ccc;background:#fff;backdrop-filter:none;break-inside:avoid}
+    h1,h2,h3,h4,p,li,td,th,strong,summary,.muted{color:#111 !important;-webkit-text-fill-color:#111 !important}
+    h1{background:none !important}
+    .ex .answer{display:block !important;background:#f5fdf9;border-top:1px solid #ccc}
+    details.gloss{border-color:#ccc} details.gloss[open] p{display:block}
+    details.gloss summary{color:#111}
+    .badge,.pill,.callout,.tile,table{break-inside:avoid}
+    .callout{background:#f3f4f6 !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="card hero">
+    <p style="margin:0 0 6px;letter-spacing:2px;font-size:.78rem;font-weight:700;color:var(--primary)">FOENIX CONSULTING · FORMATION PROFESSIONNELLE</p>
+    <span class="badge soft">Parcours type · 26/06/2026</span>
+    <h1>Gestion de projet</h1>
+    <p>Une formation pas à pas pour acquérir des bases solides, vous entraîner sur des cas concrets, et valoriser cette compétence sur votre CV et en entretien.</p>
+    <div class="meta-row">
+      <span class="pill">🎯 Niveau débutant</span>
+      <span class="pill">📚 4 modules</span>
+      <span class="pill">⏱️ ~5 semaines</span>
+      <span class="pill">✅ Exercices corrigés</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="bar"><i id="globalBar"></i></div>
+      <p class="muted" style="margin-top:8px;font-size:.85rem"><span id="globalPct">0</span>% du parcours validé · votre progression est sauvegardée automatiquement</p>
+    </div>
+    <p style="margin-top:18px"><button class="btn" id="pdfBtn">📄 Télécharger le support en PDF</button></p>
+  </header>
+
+  <!-- OBJECTIFS & PREREQUIS -->
+  <section class="card">
+    <h2>🎯 Objectifs pédagogiques</h2>
+    <ul>
+      <li>Acquérir des <strong>bases solides</strong> en gestion de projet.</li>
+      <li>Être capable de <strong>mettre en pratique</strong> sur des cas concrets.</li>
+      <li>Gagner en <strong>autonomie et en confiance</strong> sur le sujet.</li>
+      <li><strong>Valoriser cette compétence</strong> sur votre CV et en entretien.</li>
+    </ul>
+    <h3>Prérequis</h3>
+    <div class="grid">
+      <div class="tile"><h4>Motivation &amp; régularité</h4><p class="muted">15 à 30 min par jour suffisent pour progresser sereinement.</p></div>
+      <div class="tile"><h4>Un appareil connecté</h4><p class="muted">Ordinateur ou smartphone avec une connexion internet.</p></div>
+      <div class="tile"><h4>Aucune base requise</h4><p class="muted">On démarre de zéro, au niveau débutant.</p></div>
+    </div>
+    <h3>Comment fonctionne ce parcours</h3>
+    <p>4 modules progressifs, suivis d'un projet pratique. Chaque module suit trois temps : <strong>concepts &amp; terminologie</strong> → <strong>démonstrations et exemples concrets</strong> → <strong>exercices d'application corrigés</strong>.</p>
+    <div class="callout"><span class="lbl">🧭 Le fil rouge du parcours</span>
+      Pour rendre chaque notion concrète, on suit un même projet-exemple d'un bout à l'autre : <strong>« Organiser un séminaire d'entreprise de 2 jours pour 50 personnes »</strong>. Un projet simple à se représenter, qui mobilise pourtant toutes les bases : objectif, périmètre, budget, planning, équipe et risques.</div>
+  </section>
+
+  <!-- NAV -->
+  <nav class="modnav" id="modnav">
+    <button data-m="0" class="active">🗺️ M1 · Vocabulaire</button>
+    <button data-m="1">🧩 M2 · Notions de base</button>
+    <button data-m="2">✍️ M3 · Exercices guidés</button>
+    <button data-m="3">🚀 M4 · Mini-projet</button>
+    <button data-m="4">🏆 Projet pratique</button>
+  </nav>
+
+  <!-- ============ MODULE 1 ============ -->
+  <section class="module show" data-mod="0">
+    <div class="card">
+      <span class="badge">Module 1</span>
+      <h2>🗺️ Découverte et vocabulaire <span class="pill">1 semaine</span></h2>
+      <p class="muted">On pose les fondations : qu'est-ce qu'un projet, et avec quels mots en parle-t-on ?</p>
+
+      <h3>1.1 — Qu'est-ce qu'un projet ?</h3>
+      <p>Un <strong>projet</strong> est un effort <strong>temporaire</strong> (il a un début et une fin) entrepris pour créer un <strong>livrable unique</strong> : un produit, un service ou un résultat qui n'existait pas avant.</p>
+      <div class="callout">
+        <span class="lbl">💡 Projet vs activité courante (« opérations »)</span>
+        Un <strong>projet</strong> a une date de fin et produit un résultat unique. Une <strong>opération</strong> se répète sans fin.
+      </div>
+      <table>
+        <tr><th>Un PROJET</th><th>Une OPÉRATION</th></tr>
+        <tr><td>Construire un nouveau magasin</td><td>Ouvrir et tenir le magasin chaque jour</td></tr>
+        <tr><td>Organiser un séminaire</td><td>Faire la paie tous les mois</td></tr>
+        <tr><td>A une date de fin · résultat unique</td><td>Se répète · même processus</td></tr>
+      </table>
+
+      <h3>1.2 — Le vocabulaire essentiel (12 mots clés)</h3>
+      <p>Cliquez sur chaque terme pour sa définition simple. Gardez-les sous la main.</p>
+      <details class="gloss"><summary>Projet</summary><p>Effort temporaire entrepris pour créer un résultat unique.</p></details>
+      <details class="gloss"><summary>Livrable</summary><p>Un résultat concret et vérifiable que le projet doit produire (ex. : la salle réservée, le site en ligne).</p></details>
+      <details class="gloss"><summary>Périmètre (<em>scope</em>)</summary><p>Tout ce que le projet inclut… et, tout aussi important, ce qu'il <strong>exclut</strong>.</p></details>
+      <details class="gloss"><summary>Objectif</summary><p>Le but visé, idéalement formulé en <strong>SMART</strong> (voir Module 2).</p></details>
+      <details class="gloss"><summary>Tâche</summary><p>Une action à réaliser (ex. : « envoyer les invitations »).</p></details>
+      <details class="gloss"><summary>Jalon (<em>milestone</em>)</summary><p>Une date-clé qui marque une étape importante (ex. : « invitations envoyées »). Sans durée.</p></details>
+      <details class="gloss"><summary>Échéancier (planning)</summary><p>L'enchaînement des tâches dans le temps.</p></details>
+      <details class="gloss"><summary>Budget</summary><p>L'argent prévu pour réaliser le projet.</p></details>
+      <details class="gloss"><summary>Ressources</summary><p>Les moyens : personnes, matériel, salles, outils.</p></details>
+      <details class="gloss"><summary>Partie prenante (<em>stakeholder</em>)</summary><p>Toute personne concernée par le projet : client, équipe, direction, fournisseurs… Ils peuvent l'aider ou le freiner.</p></details>
+      <details class="gloss"><summary>Risque</summary><p>Un événement incertain qui peut affecter le projet, en bien ou en mal.</p></details>
+      <details class="gloss"><summary>Chef de projet</summary><p>La personne qui pilote le projet et coordonne tout le monde.</p></details>
+
+      <h3>1.3 — Le triangle d'or du projet</h3>
+      <p>Tout projet est tenu par trois contraintes liées : <strong>Périmètre</strong> (ce qu'on produit), <strong>Délais</strong> (le temps), <strong>Coût</strong> (le budget). Au centre : la <strong>qualité</strong>. Si on modifie l'une, les autres bougent — c'est l'arbitrage permanent du chef de projet.</p>
+      <div class="callout warn"><span class="lbl">⚖️ Exemple d'arbitrage</span> Vouloir plus de prestations (périmètre) sans rallonger le budget → il faudra plus de temps, ou la qualité baissera.</div>
+
+      <h3>1.4 — Qui fait quoi : les acteurs du projet</h3>
+      <table>
+        <tr><th>Acteur</th><th>Rôle</th></tr>
+        <tr><td><strong>Commanditaire / sponsor</strong></td><td>Décide du projet, le finance, fixe le cap.</td></tr>
+        <tr><td><strong>Chef de projet</strong></td><td>Organise, planifie, coordonne, suit l'avancement.</td></tr>
+        <tr><td><strong>Équipe projet</strong></td><td>Réalise les tâches.</td></tr>
+        <tr><td><strong>Client / bénéficiaire</strong></td><td>Reçoit et utilise le résultat.</td></tr>
+        <tr><td><strong>Parties prenantes</strong></td><td>Tous ceux qui influencent ou subissent le projet (fournisseurs, direction…).</td></tr>
+      </table>
+
+      <h3>1.5 — Démonstration : notre fil rouge décodé</h3>
+      <div class="callout ok">
+        <span class="lbl">🧭 Projet-exemple — « Séminaire d'entreprise de 2 jours pour 50 personnes »</span>
+        <strong>Résultat unique :</strong> un séminaire de 2 jours réussi pour 50 personnes.<br>
+        <strong>Livrables :</strong> salle réservée, programme validé, intervenants confirmés, repas organisés, participants présents.<br>
+        <strong>Triangle d'or :</strong> périmètre = 2 jours / 50 pers. · délais = dans 6 semaines · coût = 5 000 000 FCFA.<br>
+        <strong>Commanditaire :</strong> la direction · <strong>Chef de projet :</strong> vous · <strong>Parties prenantes :</strong> hôtel, traiteur, intervenants, participants.
+      </div>
+
+      <h3>1.6 — Exercices d'application corrigés</h3>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 1</span><p>Parmi ces situations, lesquelles sont des <strong>projets</strong> et lesquelles sont des <strong>opérations</strong> ?<br>a) Déménager les bureaux de l'entreprise — b) Payer les salaires chaque mois — c) Lancer une nouvelle application mobile — d) Répondre aux e-mails du support client.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer">
+          <p><strong>Projets</strong> (uniques, datés) : <strong>a)</strong> déménagement et <strong>c)</strong> lancement d'app.<br>
+          <strong>Opérations</strong> (répétitives, continues) : <strong>b)</strong> paie et <strong>d)</strong> support.</p>
+          <p class="muted">Astuce : si l'activité a une <em>fin clairement définie</em> et produit quelque chose de <em>nouveau</em>, c'est un projet.</p>
+        </div>
+      </div>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 2</span><p>Pour le projet « organiser un anniversaire surprise », identifiez : 1 commanditaire, 2 parties prenantes, 1 livrable, 1 jalon.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer">
+          <ul>
+            <li><strong>Commanditaire :</strong> la personne qui paie/commande la fête.</li>
+            <li><strong>Parties prenantes :</strong> les invités, le traiteur, le lieu de réception, la personne fêtée.</li>
+            <li><strong>Livrable :</strong> la fête réussie (ou plus concrètement : la salle décorée + le buffet).</li>
+            <li><strong>Jalon :</strong> « invitations envoyées » ou « lieu réservé ».</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>1.7 — Mini-quiz de validation</h3>
+      <div class="quiz" data-quiz="q1">
+        <p><strong>Q.</strong> Quelles sont les trois contraintes du « triangle d'or » d'un projet ?</p>
+        <label class="opt"><input type="radio" name="q1">Motivation, énergie, talent</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q1">Délais, coûts, périmètre</label>
+        <label class="opt"><input type="radio" name="q1">Client, équipe, fournisseur</label>
+        <div class="qfeedback"></div>
+      </div>
+      <div class="quiz" data-quiz="q1b">
+        <p><strong>Q.</strong> Qui finance et soutient le projet, et à qui le chef de projet rend des comptes ?</p>
+        <label class="opt"><input type="radio" name="q1b">La partie prenante</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q1b">Le commanditaire (sponsor)</label>
+        <label class="opt"><input type="radio" name="q1b">Le livrable</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m1"> <span><strong>J'ai terminé le Module 1</strong> — je sais définir un projet et j'en maîtrise le vocabulaire.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 2 ============ -->
+  <section class="module" data-mod="1">
+    <div class="card">
+      <span class="badge">Module 2</span>
+      <h2>🧩 Notions de base, pas à pas <span class="pill">2 semaines</span></h2>
+      <p class="muted">Le cœur du métier : comment un projet se déroule, de l'idée à la clôture.</p>
+
+      <h3>2.1 — Le cycle de vie d'un projet (5 phases)</h3>
+      <table>
+        <tr><th>Phase</th><th>Question clé</th><th>Livrable typique</th></tr>
+        <tr><td><strong>1. Cadrage / Initiation</strong></td><td>Pourquoi fait-on ce projet ?</td><td>Note de cadrage (charte)</td></tr>
+        <tr><td><strong>2. Planification</strong></td><td>Qui fait quoi, quand, combien ?</td><td>Planning, budget, WBS</td></tr>
+        <tr><td><strong>3. Exécution</strong></td><td>On produit les livrables.</td><td>Le travail réel</td></tr>
+        <tr><td><strong>4. Suivi &amp; contrôle</strong></td><td>Est-on dans les clous ?</td><td>Tableau de bord, points d'avancement</td></tr>
+        <tr><td><strong>5. Clôture</strong></td><td>Tout est-il livré et validé ?</td><td>Bilan, retour d'expérience</td></tr>
+      </table>
+      <div class="callout"><span class="lbl">💡 À retenir</span> Le suivi (phase 4) se fait <strong>en parallèle</strong> de l'exécution : on avance et on contrôle en même temps.</div>
+
+      <h3>2.2 — Cadrer le projet (la note de cadrage + l'objectif SMART)</h3>
+      <p>Cadrer, c'est répondre à trois questions avant de se lancer : <strong>pourquoi</strong> ce projet, <strong>que</strong> doit-il produire, et quelles sont ses <strong>limites</strong> ? On consigne tout dans une <strong>note de cadrage</strong> (1 page) : contexte, objectif, périmètre (inclus / exclu), budget, délais, parties prenantes, risques principaux.</p>
+      <h4>Un bon objectif est SMART</h4>
+      <table>
+        <tr><th>Lettre</th><th>Critère</th><th>Exemple (séminaire)</th></tr>
+        <tr><td><strong>S</strong></td><td>Spécifique : précis et clair</td><td>Organiser un séminaire de cohésion</td></tr>
+        <tr><td><strong>M</strong></td><td>Mesurable : on peut vérifier</td><td>Pour 50 collaborateurs</td></tr>
+        <tr><td><strong>A</strong></td><td>Atteignable : réaliste</td><td>Avec le budget et l'équipe disponibles</td></tr>
+        <tr><td><strong>R</strong></td><td>Réaliste / pertinent</td><td>Aligné sur l'objectif de cohésion</td></tr>
+        <tr><td><strong>T</strong></td><td>Temporel : avec une date</td><td>Les 14 et 15 août 2026</td></tr>
+      </table>
+      <div class="callout ok"><span class="lbl">🧭 Démonstration — objectif SMART du séminaire</span>
+        « Organiser un séminaire de cohésion de 2 jours pour les 50 collaborateurs, les 14 et 15 août 2026, dans un budget de 5 000 000 FCFA. »</div>
+
+      <h3>2.3 — Découper le travail : la WBS</h3>
+      <p>La <strong>WBS</strong> (<em>Work Breakdown Structure</em>, ou organigramme des tâches) consiste à découper le projet en morceaux de plus en plus petits jusqu'à obtenir des <strong>tâches réalisables</strong>.</p>
+      <div class="callout ok">
+        <span class="lbl">Exemple — projet « repeindre une chambre »</span>
+        1. Préparer (acheter peinture · protéger meubles · poncer murs) — 2. Peindre (sous-couche · 2 couches) — 3. Finaliser (retirer protections · nettoyer · ranger).
+      </div>
+
+      <h3>2.4 — Planifier dans le temps : le diagramme de Gantt</h3>
+      <p>Un <strong>Gantt</strong> place les tâches sur un calendrier sous forme de barres horizontales. Il montre la <strong>durée</strong>, l'<strong>ordre</strong> et les <strong>dépendances</strong> (telle tâche ne peut commencer qu'après telle autre).</p>
+      <table>
+        <tr><th>Tâche</th><th>Sem. 1</th><th>Sem. 2</th><th>Sem. 3</th></tr>
+        <tr><td>Préparer les murs</td><td>███</td><td></td><td></td></tr>
+        <tr><td>Sous-couche</td><td></td><td>██</td><td></td></tr>
+        <tr><td>Peinture finale</td><td></td><td>█</td><td>██</td></tr>
+      </table>
+      <p class="muted">On ne peut pas peindre avant d'avoir préparé : c'est une <strong>dépendance</strong>.</p>
+
+      <h3>2.5 — Budgéter</h3>
+      <p>On chiffre chaque poste de dépense, puis on additionne. On garde toujours une <strong>marge pour les imprévus</strong> (5 à 10 %).</p>
+      <table>
+        <tr><th>Poste</th><th>Montant estimé (FCFA)</th></tr>
+        <tr><td>Location de la salle</td><td>1 200 000</td></tr>
+        <tr><td>Restauration (50 pers. × 2 jours)</td><td>2 000 000</td></tr>
+        <tr><td>Intervenants</td><td>800 000</td></tr>
+        <tr><td>Transport / logistique</td><td>500 000</td></tr>
+        <tr><td>Marge imprévus (10 %)</td><td>450 000</td></tr>
+        <tr><th>TOTAL</th><th>4 950 000</th></tr>
+      </table>
+
+      <h3>2.6 — Identifier les risques</h3>
+      <p>Un <strong>risque</strong> est un événement incertain qui, s'il survient, impacte le projet. On les note dans un <strong>registre des risques</strong> : probabilité, impact, et action prévue.</p>
+      <table>
+        <tr><th>Risque</th><th>Probabilité</th><th>Impact</th><th>Action prévue</th></tr>
+        <tr><td>L'hôtel annule la réservation</td><td>Faible</td><td>Fort</td><td>Confirmer par écrit + plan B</td></tr>
+        <tr><td>Un intervenant se désiste</td><td>Moyenne</td><td>Moyen</td><td>Prévoir un remplaçant</td></tr>
+        <tr><td>Peu d'inscrits</td><td>Moyenne</td><td>Fort</td><td>Relancer, rendre l'événement attractif</td></tr>
+      </table>
+
+      <h3>2.7 — Exécuter et suivre</h3>
+      <p>On réalise les tâches et, surtout, on <strong>suit l'avancement</strong> : « Où en est-on par rapport au plan ? » Pour chaque tâche on note son avancement (0 % / 50 % / 100 %) et son état.</p>
+      <table>
+        <tr><th>Tâche</th><th>Avancement</th><th>État</th></tr>
+        <tr><td>Réserver la salle</td><td>100 %</td><td>🟢 dans les temps</td></tr>
+        <tr><td>Confirmer les intervenants</td><td>50 %</td><td>🟠 à surveiller</td></tr>
+        <tr><td>Envoyer les invitations</td><td>0 %</td><td>🔴 en retard</td></tr>
+      </table>
+      <div class="callout warn"><span class="lbl">🔁 Gestion des changements</span> Quand quelqu'un demande une modification, on évalue son effet sur le <strong>triangle</strong> (délai, coût, périmètre) <em>avant</em> d'accepter.</div>
+
+      <h3>2.8 — Clôturer</h3>
+      <p>Clôturer, c'est finir proprement. Quatre réflexes :</p>
+      <ul>
+        <li>Vérifier que tous les <strong>livrables sont conformes</strong> et acceptés par le commanditaire.</li>
+        <li>Faire le <strong>bilan</strong> : objectifs atteints ? budget tenu ? délais respectés ?</li>
+        <li>Recueillir le <strong>retour d'expérience (REX)</strong> : ce qui a marché, ce qu'on ferait autrement.</li>
+        <li><strong>Archiver</strong> les documents et <strong>remercier</strong> l'équipe.</li>
+      </ul>
+
+      <h3>2.9 — Qui fait quoi : la matrice RACI</h3>
+      <p>Pour chaque tâche, on précise qui est : <strong>R</strong>esponsable (fait), <strong>A</strong>pprobateur (valide), <strong>C</strong>onsulté (donne un avis), <strong>I</strong>nformé (tenu au courant).</p>
+
+      <h3>2.10 — Exercices d'application corrigés</h3>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 1</span><p>Remettez ces étapes dans l'ordre du cycle de vie : <em>Exécution · Clôture · Cadrage · Planification</em>.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p><strong>Cadrage → Planification → Exécution → Clôture</strong> (avec le suivi &amp; contrôle qui accompagne l'exécution).</p></div>
+      </div>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 2</span><p>Construisez une mini-WBS (3 grandes parties, 2 tâches chacune) pour le projet « créer un compte Instagram pour une association ».</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer">
+          <ul>
+            <li><strong>1. Préparer :</strong> définir la ligne éditoriale · créer le logo/visuel de profil.</li>
+            <li><strong>2. Créer :</strong> ouvrir le compte · rédiger la bio + premiers posts.</li>
+            <li><strong>3. Lancer :</strong> publier les 5 premiers posts · inviter les membres à s'abonner.</li>
+          </ul>
+          <p class="muted">Toute découpe cohérente et complète est valable — il n'y a pas une seule bonne réponse.</p>
+        </div>
+      </div>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 3</span><p>Identifiez un risque du projet ci-dessus, estimez sa probabilité/impact, et proposez une réponse.</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Ex. <strong>Risque :</strong> peu d'abonnés au lancement. <strong>Prob. :</strong> forte · <strong>Impact :</strong> moyen. <strong>Réponse :</strong> préparer une publication d'annonce + demander à 10 membres de partager le jour J.</p></div>
+      </div>
+
+      <div class="ex">
+        <div class="q"><span class="tag">Exercice 4</span><p>Transformez cet objectif vague en objectif <strong>SMART</strong> : « Améliorer la formation des employés ».</p></div>
+        <button class="toggle">Voir la correction ▾</button>
+        <div class="answer"><p>Ex. : « <strong>Former les 20 agents</strong> du service client à l'outil X, en 2 sessions de 3 h, <strong>avant le 30 septembre 2026</strong>, avec un score d'évaluation moyen <strong>≥ 80 %</strong>. » → on y retrouve les 5 lettres S-M-A-R-T.</p></div>
+      </div>
+
+      <h3>2.11 — Mini-quiz de validation</h3>
+      <div class="quiz" data-quiz="q2">
+        <p><strong>Q.</strong> À quoi sert principalement un diagramme de Gantt ?</p>
+        <label class="opt"><input type="radio" name="q2">À calculer le budget exact</label>
+        <label class="opt"><input type="radio" name="q2">À recruter l'équipe</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q2">À visualiser les tâches, leur durée et leur ordre dans le temps</label>
+        <div class="qfeedback"></div>
+      </div>
+      <div class="quiz" data-quiz="q2smart">
+        <p><strong>Q.</strong> Dans un objectif SMART, que signifie le « T » ?</p>
+        <label class="opt"><input type="radio" name="q2smart">Technique</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q2smart">Temporel (avec une date / échéance)</label>
+        <label class="opt"><input type="radio" name="q2smart">Théorique</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m2"> <span><strong>J'ai terminé le Module 2</strong> — je maîtrise les phases, l'objectif SMART, la WBS, le Gantt, le budget, les risques, le suivi, la clôture et le RACI.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 3 ============ -->
+  <section class="module" data-mod="2">
+    <div class="card">
+      <span class="badge">Module 3</span>
+      <h2>✍️ Premiers exercices guidés <span class="pill">1 semaine</span></h2>
+      <div class="callout"><span class="lbl">🎯 Le projet à construire ensemble</span>
+        Vous allez piloter un projet fil rouge : <strong>« Organiser une journée portes ouvertes (JPO) pour faire connaître votre activité »</strong>. À chaque étape, essayez d'abord, puis comparez au corrigé-type.</div>
+
+      <h3>3.1 — Étape 1 : rédiger l'objectif SMART</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Écrivez l'objectif de votre journée portes ouvertes au format <strong>SMART</strong>.</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <p>« Organiser une journée portes ouvertes <strong>le 12 septembre 2026</strong> pour accueillir <strong>au moins 80 visiteurs</strong> et générer <strong>15 contacts qualifiés</strong>, dans un budget de <strong>600 000 FCFA</strong>. »</p>
+          <p class="muted">On y retrouve les 5 lettres : Spécifique, Mesurable (80 visiteurs / 15 contacts), Atteignable, Réaliste, Temporel (12/09/2026).</p>
+        </div>
+      </div>
+
+      <h3>3.2 — Étape 2 : lister les parties prenantes</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Citez au moins 4 parties prenantes et ce qu'elles attendent.</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <ul>
+            <li><strong>Vous (chef de projet)</strong> : que la journée soit un succès.</li>
+            <li><strong>Les visiteurs</strong> : découvrir, être bien accueillis.</li>
+            <li><strong>Votre équipe</strong> : des consignes claires.</li>
+            <li><strong>Les fournisseurs</strong> (sono, stands) : un cahier des charges et un paiement à temps.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>3.3 — Étape 3 : découper le travail (WBS)</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Proposez 3 à 4 lots de travail.</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <ul>
+            <li><strong>Lot 1 — Lieu &amp; matériel :</strong> trouver le lieu, stands, sonorisation, signalétique.</li>
+            <li><strong>Lot 2 — Communication :</strong> affiches, réseaux sociaux, invitations.</li>
+            <li><strong>Lot 3 — Animation :</strong> programme de la journée, démonstrations.</li>
+            <li><strong>Lot 4 — Accueil :</strong> inscription des visiteurs, badges, collation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>3.4 — Étape 4 : esquisser le planning</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Placez vos grandes tâches sur les 4 semaines avant l'événement (S-4 à S-1).</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <table>
+            <tr><th>Tâche</th><th>S-4</th><th>S-3</th><th>S-2</th><th>S-1</th></tr>
+            <tr><td>Réserver le lieu</td><td>██</td><td></td><td></td><td></td></tr>
+            <tr><td>Lancer la communication</td><td></td><td>██</td><td>██</td><td>██</td></tr>
+            <tr><td>Préparer l'animation</td><td></td><td></td><td>██</td><td>██</td></tr>
+            <tr><td>Organiser l'accueil</td><td></td><td></td><td></td><td>██</td></tr>
+          </table>
+          <p class="muted"><strong>Dépendance :</strong> on ne lance la communication qu'<em>après</em> avoir réservé le lieu (sinon on annonce une date/un lieu non confirmés).</p>
+        </div>
+      </div>
+
+      <h3>3.5 — À vous de jouer : construisez votre Gantt interactif</h3>
+      <p class="muted">Pré-rempli avec la JPO. Renommez les tâches, cliquez sur les cases pour remplir la durée, ajoutez/supprimez des lignes. Votre Gantt est sauvegardé automatiquement.</p>
+      <div class="gb" id="gantt"></div>
+      <p>
+        <button class="btn ghost" id="gAddRow">＋ Ajouter une tâche</button>
+        <button class="btn ghost" id="gReset">↺ Réinitialiser le Gantt</button>
+      </p>
+
+      <h3>3.6 — Étape 5 : construire le registre des risques</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Identifiez 2 risques de la JPO avec leur action.</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <table>
+            <tr><th>Risque</th><th>Action prévue</th></tr>
+            <tr><td>Faible affluence</td><td>Communiquer plus tôt, relancer, nouer des partenariats</td></tr>
+            <tr><td>Mauvais temps (si extérieur)</td><td>Prévoir une solution couverte (plan B)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout ok"><span class="lbl">✅ Bravo</span> Vous venez de produire un <strong>mini-dossier de projet complet</strong> : objectif SMART, parties prenantes, découpage, planning et risques. C'est exactement ce qu'on attend d'un chef de projet débutant.</div>
+
+      <h3>3.7 — Étape de synthèse : la carte des parties prenantes</h3>
+      <div class="ex">
+        <div class="q"><span class="tag">À vous</span><p>Classez 4 parties prenantes de la JPO selon leur <strong>influence</strong> et leur <strong>intérêt</strong>.</p></div>
+        <button class="toggle">Voir un corrigé type ▾</button>
+        <div class="answer">
+          <table>
+            <tr><th></th><th>Faible intérêt</th><th>Fort intérêt</th></tr>
+            <tr><th>Forte influence</th><td>Mairie / autorisation (tenir informée)</td><td><strong>Vous, chef de projet</strong> (piloter de près)</td></tr>
+            <tr><th>Faible influence</th><td>Voisinage (surveiller)</td><td>Les visiteurs (tenir satisfaits)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <h3>3.8 — Mini-quiz de validation</h3>
+      <div class="quiz" data-quiz="q3">
+        <p><strong>Q.</strong> Sur une carte des parties prenantes, comment gère-t-on une personne à <em>forte influence</em> et <em>fort intérêt</em> ?</p>
+        <label class="opt"><input type="radio" name="q3">On l'ignore, elle se débrouillera</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q3">On la gère de près (communication rapprochée)</label>
+        <label class="opt"><input type="radio" name="q3">On la tient simplement informée de loin</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m3"> <span><strong>J'ai terminé le Module 3</strong> — j'ai produit le mini-dossier de la JPO : objectif SMART, parties prenantes, WBS, planning et registre des risques.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ MODULE 4 ============ -->
+  <section class="module" data-mod="3">
+    <div class="card">
+      <span class="badge">Module 4</span>
+      <h2>🚀 Mini-projet d'application <span class="pill">1 semaine</span></h2>
+      <p class="muted">Vous menez un projet complet de bout en bout. Choisissez votre sujet, puis cochez chaque livrable.</p>
+
+      <h3>4.1 — Choisissez votre mini-projet</h3>
+      <div class="grid">
+        <div class="tile"><h4>🎉 Événement</h4><p class="muted">Organiser une petite soirée, un afterwork ou un déjeuner d'équipe.</p></div>
+        <div class="tile"><h4>🌐 Présence en ligne</h4><p class="muted">Lancer un blog, une newsletter ou une page d'association.</p></div>
+        <div class="tile"><h4>🏠 Projet perso</h4><p class="muted">Réaménager une pièce, planifier un voyage, organiser un vide-grenier.</p></div>
+      </div>
+
+      <h3>4.2 — Checklist des livrables à produire</h3>
+      <p class="muted">Chaque case cochée fait avancer ce module.</p>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>1. Note de cadrage</strong> — objectif <strong>SMART</strong>, périmètre (inclus/exclu), budget, délais sur une page.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>2. WBS</strong> — le projet découpé en lots et tâches.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>3. Planning / Gantt</strong> — tâches placées dans le temps avec leurs dépendances.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>4. Budget estimatif</strong> — liste des dépenses prévues + total.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>5. Carte des parties prenantes</strong> — influence × intérêt.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>6. Registre des risques</strong> — 3 risques + réponses.</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>7. Suivi d'avancement</strong> — un tableau « à faire / en cours / fait ».</span></label>
+      <label class="check"><input type="checkbox" data-task="m4"> <span><strong>8. Bilan de clôture</strong> — ce qui a marché, ce qui est à améliorer (retour d'expérience).</span></label>
+
+      <div class="callout warn"><span class="lbl">⚠️ Erreurs fréquentes du débutant</span>
+        Périmètre flou (on rajoute des choses en cours de route) · pas de marge dans le planning · oublier d'identifier les risques · ne pas communiquer l'avancement aux parties prenantes.</div>
+
+      <h3>4.3 — 🧰 Boîte à outils : templates à télécharger</h3>
+      <p class="muted">Des modèles prêts à remplir pour votre mini-projet (formats .txt et .csv, ouvrables dans Word ou Excel/Google Sheets).</p>
+      <div class="toolgrid">
+        <button class="dlbtn" data-tpl="cadrage"><b>📋 Note de cadrage</b><span>.txt — objectif, périmètre, budget, risques</span></button>
+        <button class="dlbtn" data-tpl="wbs"><b>🌳 WBS</b><span>.csv — lots &amp; tâches</span></button>
+        <button class="dlbtn" data-tpl="gantt"><b>📅 Planning / Gantt</b><span>.csv — tâches × semaines</span></button>
+        <button class="dlbtn" data-tpl="raci"><b>👥 Matrice RACI</b><span>.csv — rôles par tâche</span></button>
+        <button class="dlbtn" data-tpl="risques"><b>⚠️ Registre des risques</b><span>.csv — proba × impact × réponse</span></button>
+        <button class="dlbtn" data-tpl="suivi"><b>📊 Suivi d'avancement</b><span>.csv — à faire / en cours / fait</span></button>
+      </div>
+
+      <h3>4.4 — Auto-évaluation</h3>
+      <div class="quiz" data-quiz="q4">
+        <p><strong>Q.</strong> En fin de projet, quel livrable permet de <em>progresser pour la prochaine fois</em> ?</p>
+        <label class="opt"><input type="radio" name="q4">La note de cadrage</label>
+        <label class="opt" data-correct="1"><input type="radio" name="q4">Le bilan / retour d'expérience de clôture</label>
+        <label class="opt"><input type="radio" name="q4">La carte des parties prenantes</label>
+        <div class="qfeedback"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="m4done"> <span><strong>J'ai terminé le Module 4</strong> — j'ai mené un mini-projet complet, du cadrage au bilan.</span></label>
+    </div>
+  </section>
+
+  <!-- ============ PROJET PRATIQUE ============ -->
+  <section class="module" data-mod="4">
+    <div class="card">
+      <span class="badge">Projet pratique · preuve de compétence</span>
+      <h2>🏆 Votre projet personnel</h2>
+      <p>Réalisez un projet personnel mobilisant la gestion de projet <strong>de bout en bout</strong> — par exemple un livrable réutilisable dans votre futur poste — à présenter comme <strong>preuve de compétence</strong>.</p>
+
+      <h3>Format de présentation (à mettre sur votre CV / portfolio)</h3>
+      <ol>
+        <li><strong>Le contexte</strong> en 2 phrases : quel besoin, pour qui.</li>
+        <li><strong>Votre rôle</strong> et les contraintes (délais, budget).</li>
+        <li><strong>Les outils mobilisés</strong> : cadrage, WBS, Gantt, RACI, registre des risques.</li>
+        <li><strong>Le résultat</strong> chiffré : livré dans les délais ? satisfaction ? budget respecté ?</li>
+        <li><strong>Ce que vous avez appris</strong> (le retour d'expérience).</li>
+      </ol>
+
+      <div class="callout ok"><span class="lbl">💬 Pitch d'entretien — exemple</span>
+        « J'ai piloté l'organisation d'un atelier de 20 personnes : j'ai cadré le besoin, découpé le travail en WBS, planifié sur un Gantt, géré 3 risques et suivi l'avancement. Résultat : livré dans les délais avec 90 % de satisfaction. »</div>
+
+      <h3>Pour aller plus loin</h3>
+      <div class="grid">
+        <div class="tile"><h4>Méthodes agiles</h4><p class="muted">Scrum, Kanban : utiles pour les projets incertains et itératifs.</p></div>
+        <div class="tile"><h4>Outils</h4><p class="muted">Trello, Notion, MS Project, ou un simple tableur pour vos plannings.</p></div>
+        <div class="tile"><h4>Certifications</h4><p class="muted">CAPM puis PMP (PMI), ou PRINCE2 — pour valoriser officiellement la compétence.</p></div>
+      </div>
+
+      <label class="check"><input type="checkbox" data-done="proj"> <span><strong>J'ai réalisé et documenté mon projet pratique</strong> — prêt à le présenter.</span></label>
+
+      <h3>📖 Glossaire récapitulatif</h3>
+      <table>
+        <tr><th>Terme</th><th>Définition</th></tr>
+        <tr><td>Budget</td><td>Argent prévu pour réaliser le projet.</td></tr>
+        <tr><td>Cadrage</td><td>Phase initiale qui définit le pourquoi, le quoi et les limites.</td></tr>
+        <tr><td>Chef de projet</td><td>Personne qui pilote et coordonne le projet.</td></tr>
+        <tr><td>Clôture</td><td>Phase finale : livraison, bilan, retour d'expérience.</td></tr>
+        <tr><td>Diagramme de Gantt</td><td>Représentation des tâches sur un calendrier.</td></tr>
+        <tr><td>Jalon</td><td>Date-clé marquant une étape importante.</td></tr>
+        <tr><td>Livrable</td><td>Résultat concret et vérifiable produit par le projet.</td></tr>
+        <tr><td>Objectif SMART</td><td>Objectif Spécifique, Mesurable, Atteignable, Réaliste, Temporel.</td></tr>
+        <tr><td>Partie prenante</td><td>Toute personne concernée par le projet.</td></tr>
+        <tr><td>Périmètre (scope)</td><td>Ce que le projet inclut et exclut.</td></tr>
+        <tr><td>Planning / échéancier</td><td>Enchaînement des tâches dans le temps.</td></tr>
+        <tr><td>Registre des risques</td><td>Liste des risques avec probabilité, impact et actions.</td></tr>
+        <tr><td>Risque</td><td>Événement incertain pouvant affecter le projet (en bien ou en mal).</td></tr>
+        <tr><td>Triangle d'or</td><td>Équilibre entre périmètre, délais et coût (qualité au centre).</td></tr>
+      </table>
+
+      <div class="card" style="margin-top:24px;text-align:center;background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.25)">
+        <h2 style="justify-content:center">Tableau de bord</h2>
+        <div class="kpi">
+          <div><b id="kModules">0/5</b><span class="muted">étapes validées</span></div>
+          <div><b id="kQuiz">0/6</b><span class="muted">quiz réussis</span></div>
+          <div><b id="kPct">0%</b><span class="muted">parcours</span></div>
+        </div>
+        <p style="margin-top:16px"><button class="btn ghost" id="resetBtn">↺ Réinitialiser ma progression</button></p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot"><strong>FOENIX CONSULTING</strong> — Parcours « Gestion de projet », niveau débutant · 26/06/2026<br>Progression enregistrée dans votre navigateur (localStorage).</p>
+</div>
+
+<script>
+(function(){
+  const KEY='formation_gp_v1';
+  const state=JSON.parse(localStorage.getItem(KEY)||'{}');
+  const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+
+  /* ---- navigation ---- */
+  const nav=document.getElementById('modnav');
+  const mods=[...document.querySelectorAll('.module')];
+  nav.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mods.forEach(m=>m.classList.toggle('show', m.dataset.mod===b.dataset.m));
+    window.scrollTo({top:nav.offsetTop-8,behavior:'smooth'});
+  });
+
+  /* ---- exercise toggles ---- */
+  document.querySelectorAll('.ex .toggle').forEach(btn=>{
+    btn.dataset.lbl=btn.textContent;            // mémorise le libellé d'origine
+    btn.addEventListener('click',()=>{
+      const open=btn.nextElementSibling.classList.toggle('show');
+      btn.textContent=open?'Masquer la correction ▴':btn.dataset.lbl;
+    });
+  });
+
+  /* ---- quiz ---- */
+  const quizDone={};
+  document.querySelectorAll('.quiz').forEach(q=>{
+    const id=q.dataset.quiz;
+    const fb=q.querySelector('.qfeedback');
+    q.querySelectorAll('.opt').forEach(opt=>{
+      opt.addEventListener('click',()=>{
+        if(quizDone[id])return;
+        const correct=opt.dataset.correct==='1';
+        opt.classList.add(correct?'correct':'wrong');
+        if(correct){
+          fb.textContent='✅ Correct !'; fb.style.color='var(--success)';
+          quizDone[id]=true; state['quiz_'+id]=true; save(); refresh();
+        }else{
+          fb.textContent='❌ Pas tout à fait, réessayez.'; fb.style.color='var(--danger)';
+          setTimeout(()=>opt.classList.remove('wrong'),900);
+        }
+      });
+    });
+    if(state['quiz_'+id]){quizDone[id]=true;
+      const c=q.querySelector('[data-correct="1"]'); c.classList.add('correct');
+      c.querySelector('input').checked=true;
+      fb.textContent='✅ Validé'; fb.style.color='var(--success)';}
+  });
+
+  /* ---- checkboxes (steps) ---- */
+  document.querySelectorAll('input[data-done]').forEach(cb=>{
+    const k='done_'+cb.dataset.done;
+    cb.checked=!!state[k];
+    cb.addEventListener('change',()=>{state[k]=cb.checked;save();refresh();});
+  });
+  /* module 4 tasks: stored individually by index */
+  document.querySelectorAll('input[data-task]').forEach((cb,i)=>{
+    const k='task_m4_'+i;
+    cb.checked=!!state[k];
+    cb.addEventListener('change',()=>{state[k]=cb.checked;save();refresh();});
+  });
+
+  /* ---- progress maths ---- */
+  function refresh(){
+    const steps=['done_m1','done_m2','done_m3','done_m4done','done_proj'];
+    const stepDone=steps.filter(s=>state[s]).length;
+    const quizKeys=['quiz_q1','quiz_q1b','quiz_q2','quiz_q2smart','quiz_q3','quiz_q4'];
+    const quizOk=quizKeys.filter(s=>state[s]).length;
+    const tasks=[...document.querySelectorAll('input[data-task]')];
+    const tasksOk=tasks.filter((_,i)=>state['task_m4_'+i]).length;
+    /* weighted: 5 steps + 3 quiz + 8 tasks = 16 items */
+    const total=steps.length+quizKeys.length+tasks.length;
+    const done=stepDone+quizOk+tasksOk;
+    const pct=Math.round(done/total*100);
+    document.getElementById('globalBar').style.width=pct+'%';
+    document.getElementById('globalPct').textContent=pct;
+    const km=document.getElementById('kModules'); if(km)km.textContent=stepDone+'/5';
+    const kq=document.getElementById('kQuiz'); if(kq)kq.textContent=quizOk+'/'+quizKeys.length;
+    const kp=document.getElementById('kPct'); if(kp)kp.textContent=pct+'%';
+  }
+  refresh();
+
+  /* ---- reset ---- */
+  const rb=document.getElementById('resetBtn');
+  if(rb)rb.addEventListener('click',()=>{
+    localStorage.removeItem(KEY);
+    location.reload();
+  });
+
+  /* ---- export PDF (vrai fichier via jsPDF, repli impression) ---- */
+  const pdfBtn=document.getElementById('pdfBtn');
+  function loadJsPDF(){
+    return new Promise((res,rej)=>{
+      if(window.jspdf&&window.jspdf.jsPDF)return res();
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+  const SKIP=el=>el.matches('button,nav,input,script,.toggle,.qfeedback,.bar,.gb');
+  function walk(node,blocks){
+    for(const el of node.children){
+      if(SKIP(el))continue;
+      const tag=el.tagName;
+      if(tag==='TABLE'){
+        blocks.push({tag:'TABLE',rows:[...el.rows].map(r=>({
+          head:[...r.cells].some(c=>c.tagName==='TH'),
+          cells:[...r.cells].map(c=>c.textContent)
+        }))});
+        continue;
+      }
+      if(/^H[1-4]$/.test(tag)){blocks.push({tag,text:el.textContent});continue;}
+      if(tag==='P'){blocks.push({tag:'P',text:el.textContent});continue;}
+      if(tag==='LI'){blocks.push({tag:'LI',text:el.textContent});continue;}
+      if(tag==='UL'||tag==='OL'){walk(el,blocks);continue;}
+      if(tag==='SUMMARY'){blocks.push({tag:'H4',text:el.textContent});continue;}
+      if(el.matches('.callout')){blocks.push({tag:'NOTE',text:el.textContent});continue;}
+      if(el.matches('.tile')){blocks.push({tag:'P',text:el.textContent});continue;}
+      if(tag==='LABEL'){blocks.push({tag:'P',text:'[ ] '+el.textContent});continue;}
+      walk(el,blocks); // conteneurs : cards, ex, answer, quiz, details, header…
+    }
+  }
+  async function makePDF(){
+    const old=pdfBtn.textContent; pdfBtn.disabled=true; pdfBtn.textContent='⏳ Génération du PDF…';
+    try{await loadJsPDF();}
+    catch(e){
+      pdfBtn.textContent=old; pdfBtn.disabled=false;
+      document.querySelectorAll('details.gloss').forEach(d=>d.open=true);
+      window.print(); return;
+    }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'pt',format:'a4'});
+    const M=48, W=doc.internal.pageSize.getWidth(), Hp=doc.internal.pageSize.getHeight();
+    let y=M;
+    const clean=s=>(s||'').replace(/\s+/g,' ').replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g,'').trim();
+    const need=h=>{if(y+h>Hp-M){doc.addPage();y=M;}};
+    function line(text,o){
+      o=o||{}; const size=o.size||10, gap=o.gap==null?4:o.gap, indent=o.indent||0;
+      doc.setFont('helvetica',o.style||'normal'); doc.setFontSize(size);
+      doc.setTextColor.apply(doc,o.color||[34,34,34]);
+      doc.splitTextToSize((o.prefix||'')+text, W-2*M-indent).forEach(ln=>{
+        need(size+gap); doc.text(ln, M+indent, y); y+=size+gap;
+      });
+    }
+    const blocks=[];
+    const hero=document.querySelector('header.hero'); if(hero)walk(hero,blocks);
+    document.querySelectorAll('.module').forEach(m=>walk(m,blocks));
+    blocks.forEach(b=>{
+      if(b.tag==='TABLE'){
+        y+=4;
+        b.rows.forEach(r=>{
+          const t=r.cells.map(clean).filter(Boolean).join('   |   ');
+          if(t)line(t,{size:9,style:r.head?'bold':'normal',color:r.head?[79,70,229]:[70,70,70],gap:3});
+        });
+        y+=6; return;
+      }
+      const txt=clean(b.text); if(!txt)return;
+      switch(b.tag){
+        case 'H1': y+=4; need(26); line(txt,{size:18,style:'bold',color:[79,70,229],gap:9}); break;
+        case 'H2': y+=12; line(txt,{size:14,style:'bold',color:[79,70,229],gap:6}); break;
+        case 'H3': y+=8; line(txt,{size:12,style:'bold',color:[109,40,217],gap:5}); break;
+        case 'H4': y+=2; line(txt,{size:10.5,style:'bold',color:[51,51,51],gap:4}); break;
+        case 'LI': line(txt,{size:10,indent:16,prefix:'-  ',gap:3}); break;
+        case 'NOTE': y+=2; line(txt,{size:9.5,style:'italic',color:[90,90,90],indent:8,gap:3}); y+=3; break;
+        default: line(txt,{size:10,gap:4});
+      }
+    });
+    // pied de page : numéros
+    const n=doc.internal.getNumberOfPages();
+    for(let i=1;i<=n;i++){
+      doc.setPage(i); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+      doc.text('Formation Gestion de projet — page '+i+'/'+n, W/2, Hp-20, {align:'center'});
+    }
+    doc.save('Formation_Gestion_de_projet.pdf');
+    pdfBtn.textContent=old; pdfBtn.disabled=false;
+  }
+  if(pdfBtn)pdfBtn.addEventListener('click',makePDF);
+
+  /* ---- téléchargement des templates ---- */
+  const TEMPLATES={
+    cadrage:{name:'note-de-cadrage.txt',content:
+`NOTE DE CADRAGE — PROJET : ______________________________
+Date : ____ / ____ / ______        Chef de projet : ______________
+
+1. CONTEXTE / POURQUOI
+   ......................................................................
+
+2. OBJECTIF (mesurable)
+   ......................................................................
+
+3. PERIMETRE (ce qui est inclus)
+   - ..................................................................
+   - ..................................................................
+
+4. HORS-PERIMETRE (ce qui n'est PAS inclus)
+   - ..................................................................
+
+5. PARTIES PRENANTES CLES
+   - Commanditaire : ..................................................
+   - Equipe        : ..................................................
+
+6. BUDGET ESTIME : ____________     DELAI / ECHEANCE : ____________
+
+7. PRINCIPAUX RISQUES
+   - ..................................................................
+`},
+    wbs:{name:'wbs.csv',content:
+`Lot;Tache;Responsable;Duree estimee
+Lot 1 - ____;Tache 1.1;;
+Lot 1 - ____;Tache 1.2;;
+Lot 2 - ____;Tache 2.1;;
+Lot 2 - ____;Tache 2.2;;
+Lot 3 - ____;Tache 3.1;;
+`},
+    gantt:{name:'planning-gantt.csv',content:
+`Tache;Sem 1;Sem 2;Sem 3;Sem 4;Sem 5;Sem 6
+Tache A;X;;;;;
+Tache B;;X;X;;;
+Tache C;;;;X;X;
+Tache D;;;;;;X
+`},
+    raci:{name:'matrice-raci.csv',content:
+`Tache;Personne 1;Personne 2;Personne 3;Personne 4
+;R = Realise;A = Approuve;C = Consulte;I = Informe
+Tache 1;R;A;C;I
+Tache 2;A;R;;I
+`},
+    risques:{name:'registre-des-risques.csv',content:
+`Risque;Probabilite (F/M/E);Impact (F/M/E);Reponse prevue;Responsable
+Exemple : retard fournisseur;M;E;Commander en avance + 2e fournisseur;
+;;;;
+;;;;
+`},
+    suivi:{name:'suivi-avancement.csv',content:
+`Tache;Statut (A faire / En cours / Fait);Echeance;Commentaire
+;A faire;;
+;En cours;;
+;Fait;;
+`}
+  };
+  function download(filename,content){
+    const blob=new Blob(['﻿'+content],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+  document.querySelectorAll('.dlbtn').forEach(b=>{
+    b.addEventListener('click',()=>{const t=TEMPLATES[b.dataset.tpl];if(t)download(t.name,t.content);});
+  });
+
+  /* ---- Gantt interactif (JPO : 4 semaines avant l'événement) ---- */
+  const gWeeks=4;
+  const gLabels=['S-4','S-3','S-2','S-1'];
+  const gDefault=[
+    {name:'Réserver le lieu',cells:[1,0,0,0]},
+    {name:'Lancer la communication',cells:[0,1,1,1]},
+    {name:'Préparer l\'animation',cells:[0,0,1,1]},
+    {name:'Organiser l\'accueil',cells:[0,0,0,1]}
+  ];
+  let gData=state.gantt&&Array.isArray(state.gantt)?state.gantt:JSON.parse(JSON.stringify(gDefault));
+  // normalise la longueur des cellules au nombre de semaines courant (gère d'anciens Gantt sauvegardés)
+  gData.forEach(r=>{r.cells=(r.cells||[]).slice(0,gWeeks);while(r.cells.length<gWeeks)r.cells.push(0);});
+  const gWrap=document.getElementById('gantt');
+  function saveG(){state.gantt=gData;save();}
+  function renderG(){
+    if(!gWrap)return;
+    let h='<table><tr><th style="min-width:160px">Tâche</th>';
+    for(let w=0;w<gWeeks;w++)h+='<th>'+gLabels[w]+'</th>';
+    h+='<th></th></tr>';
+    gData.forEach((row,ri)=>{
+      h+='<tr><td><input class="tname" data-ri="'+ri+'" value="'+row.name.replace(/"/g,'&quot;')+'"></td>';
+      for(let c=0;c<gWeeks;c++)h+='<td class="cell'+(row.cells[c]?' on':'')+'" data-ri="'+ri+'" data-ci="'+c+'"></td>';
+      h+='<td><button class="del" data-ri="'+ri+'" title="Supprimer">✕</button></td></tr>';
+    });
+    h+='</table>';
+    gWrap.innerHTML=h;
+    gWrap.querySelectorAll('td.cell').forEach(td=>td.addEventListener('click',()=>{
+      const ri=+td.dataset.ri,ci=+td.dataset.ci;
+      gData[ri].cells[ci]=gData[ri].cells[ci]?0:1;
+      td.classList.toggle('on');saveG();
+    }));
+    gWrap.querySelectorAll('input.tname').forEach(inp=>inp.addEventListener('input',()=>{
+      gData[+inp.dataset.ri].name=inp.value;saveG();
+    }));
+    gWrap.querySelectorAll('button.del').forEach(b=>b.addEventListener('click',()=>{
+      gData.splice(+b.dataset.ri,1);saveG();renderG();
+    }));
+  }
+  const gAdd=document.getElementById('gAddRow');
+  if(gAdd)gAdd.addEventListener('click',()=>{
+    gData.push({name:'Nouvelle tâche',cells:new Array(gWeeks).fill(0)});saveG();renderG();
+  });
+  const gRst=document.getElementById('gReset');
+  if(gRst)gRst.addEventListener('click',()=>{
+    gData=JSON.parse(JSON.stringify(gDefault));saveG();renderG();
+  });
+  renderG();
+})();
+</script>
+</body>
+</html>
