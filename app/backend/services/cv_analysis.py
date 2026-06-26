@@ -13,7 +13,7 @@ from fastapi import HTTPException
 from core.config import settings
 from schemas.aihub import AnalyzePdfRequest, ChatMessage, GenTxtRequest
 from services import cv_heuristic
-from services.aihub import AIHubService
+from services.aihub import AIHubService, default_text_model
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class CvAnalysisService:
                     ChatMessage(role="system", content="Fix this into valid JSON only. Return ONLY the JSON object."),
                     ChatMessage(role="user", content=payload_text),
                 ],
-                model="deepseek-v4-pro",
+                model=default_text_model(),
             )
             repaired = await self.ai_service.gentxt(repair_request)
             try:
@@ -192,7 +192,7 @@ class CvAnalysisService:
                 ChatMessage(role="system", content="You are a job matching expert. Return ONLY valid JSON."),
                 ChatMessage(role="user", content=prompt),
             ],
-            model="deepseek-v4-pro",
+            model=default_text_model(),
         )
 
         response = await self.ai_service.gentxt(request)
@@ -209,7 +209,7 @@ class CvAnalysisService:
                     ChatMessage(role="system", content="Fix this into valid JSON only. Return ONLY the JSON object."),
                     ChatMessage(role="user", content=payload_text),
                 ],
-                model="deepseek-v4-pro",
+                model=default_text_model(),
             )
             repaired = await self.ai_service.gentxt(repair_request)
             try:

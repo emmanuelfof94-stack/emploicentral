@@ -34,6 +34,17 @@ from schemas.aihub import (
 
 logger = logging.getLogger(__name__)
 
+
+def default_text_model() -> str:
+    """Modèle de génération de texte, configurable via `APP_AI_MODEL`.
+
+    Défaut = modèle de la plateforme atoms (`deepseek-v4-pro`). Avec un autre
+    fournisseur compatible OpenAI (Groq, Gemini…), poser `APP_AI_MODEL`
+    (ex. `llama-3.3-70b-versatile` pour Groq).
+    """
+    return (getattr(settings, "app_ai_model", "") or "").strip() or "deepseek-v4-pro"
+
+
 PDF_ANALYSIS_MODEL = "claude-sonnet-4.6"
 PDF_SYSTEM_PROMPT = """You are a careful PDF analysis assistant.
 

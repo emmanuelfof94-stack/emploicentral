@@ -37,7 +37,7 @@ from reportlab.platypus import (
 from core.config import settings
 from schemas.aihub import ChatMessage, GenTxtRequest
 from services import cv_heuristic, local_storage
-from services.aihub import AIHubService
+from services.aihub import AIHubService, default_text_model
 
 logger = logging.getLogger(__name__)
 
@@ -864,7 +864,7 @@ class CvGeneratorService:
                 ChatMessage(role="system", content="Tu es un coach carrière expert en CV ATS."),
                 ChatMessage(role="user", content=prompt),
             ],
-            model="deepseek-v4-pro",
+            model=default_text_model(),
         )
         response = await self.ai_service.gentxt(request)
         text = (response.content or "").strip()
@@ -902,7 +902,7 @@ class CvGeneratorService:
                 ChatMessage(role="system", content="Tu es un coach carrière expert en lettres de motivation."),
                 ChatMessage(role="user", content=prompt),
             ],
-            model="deepseek-v4-pro",
+            model=default_text_model(),
         )
         response = await self.ai_service.gentxt(request)
         text = (response.content or "").strip()
