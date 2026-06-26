@@ -30,7 +30,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 from reportlab.platypus import (
-    HRFlowable, ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    BaseDocTemplate, Frame, FrameBreak, HRFlowable, ListFlowable, ListItem, PageTemplate,
+    Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
 from core.config import settings
@@ -633,42 +634,56 @@ def _band_header(content, tpl, st, width) -> List[Any]:
     return [t, Spacer(1, 8)]
 
 
-def _build_sidebar_flow(content, tpl, st, width) -> List[Any]:
-    """Mise en page 2 colonnes : barre latérale colorée + colonne principale."""
+def _build_sidebar_pdf(content, tpl) -> bytes:
+    """Mise en page 2 colonnes via 2 cadres (frames) — pagine proprement (pas de
+    LayoutError même si le contenu dépasse une page, contrairement à un grand Table)."""
+    buf = io.BytesIO()
+    page_w, page_h = A4
+    side_w = 62 * mm
+    vmargin = 14 * mm
     wst = _white_styles(tpl)
+    st = _styles(tpl)
+
+    # Cadre gauche (barre latérale colorée) + cadre droit (colonne principale).
+    left = Frame(0, 0, side_w, page_h, leftPadding=10, rightPadding=10,
+                 topPadding=vmargin, bottomPadding=vmargin, id="side")
+    right = Frame(side_w, 0, page_w - side_w, page_h, leftPadding=14, rightPadding=16 * mm,
+                  topPadding=vmargin, bottomPadding=vmargin, id="main")
+
+    def _draw_sidebar_bg(canvas, _doc):
+        canvas.setFillColor(colors.HexColor(tpl["accent"]))
+        canvas.rect(0, 0, side_w, page_h, fill=1, stroke=0)
+
+    doc = BaseDocTemplate(
+        buf, pagesize=A4, leftMargin=0, rightMargin=0, topMargin=0, bottomMargin=0,
+        title="CV - %s" % content.get("full_name", ""),
+    )
+    doc.addPageTemplates([PageTemplate(id="cv", frames=[left, right], onPage=_draw_sidebar_bg)])
+
     c = content["contact"]
-    side: List[Any] = [Paragraph(_esc(content["full_name"]), wst["name"])]
+    flow: List[Any] = [Paragraph(_esc(content["full_name"]), wst["name"])]
     if content.get("target_title"):
-        side.append(Paragraph(_esc(content["target_title"]), wst["title"]))
+        flow.append(Paragraph(_esc(content["target_title"]), wst["title"]))
     contact_items = [x for x in [c.get("email"), c.get("phone"), c.get("location")] if x]
     if contact_items:
-        side.append(_sec("Contact", wst))
+        flow.append(_sec("Contact", wst))
         for it in contact_items:
-            side.append(Paragraph(_esc(it), wst["body"]))
-    side += _f_skills(content, wst, limit=16)
-    side += _f_languages(content, wst)
-    side += _f_certifications(content, wst, as_bullets=False)
+            flow.append(Paragraph(_esc(it), wst["body"]))
+    flow += _f_skills(content, wst, limit=16)
+    flow += _f_languages(content, wst)
+    flow += _f_certifications(content, wst, as_bullets=False)
 
-    main: List[Any] = []
+    flow.append(FrameBreak())  # bascule vers la colonne principale
+
     if content.get("target_title"):
-        main.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
-    main += _f_summary(content, st)
-    main += _f_experience(content, st)
-    main += _f_education(content, st)
-    main += _f_keywords(content, st)
+        flow.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
+    flow += _f_summary(content, st)
+    flow += _f_experience(content, st)
+    flow += _f_education(content, st)
+    flow += _f_keywords(content, st)
 
-    side_w = 62 * mm
-    main_w = width - side_w
-    t = Table([[side, main]], colWidths=[side_w, main_w])
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor(tpl["accent"])),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (0, 0), 10), ("RIGHTPADDING", (0, 0), (0, 0), 10),
-        ("TOPPADDING", (0, 0), (0, 0), 14), ("BOTTOMPADDING", (0, 0), (0, 0), 14),
-        ("LEFTPADDING", (1, 0), (1, 0), 12), ("RIGHTPADDING", (1, 0), (1, 0), 2),
-        ("TOPPADDING", (1, 0), (1, 0), 2), ("BOTTOMPADDING", (1, 0), (1, 0), 2),
-    ]))
-    return [t]
+    doc.build(flow)
+    return buf.getvalue()
 
 
 def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
@@ -679,6 +694,11 @@ def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
     """
     tpl = _template(template)
     layout = tpl.get("layout", "mono")
+
+    # La mise en page 2 colonnes a son propre moteur (2 frames, paginable).
+    if layout == "sidebar":
+        return _build_sidebar_pdf(content, tpl)
+
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
@@ -688,9 +708,7 @@ def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
     st = _styles(tpl)
     flow: List[Any] = []
 
-    if layout == "sidebar":
-        flow += _build_sidebar_flow(content, tpl, st, doc.width)
-    elif layout == "band":
+    if layout == "band":
         flow += _band_header(content, tpl, st, doc.width)
         for fn in (_f_summary, _f_skills, _f_experience, _f_education,
                    _f_certifications, _f_languages, _f_keywords):
