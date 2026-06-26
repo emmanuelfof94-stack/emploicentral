@@ -31,6 +31,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from html import unescape as _html_unescape
 from typing import Dict, List, Optional, Pattern
 
 import httpx
@@ -132,6 +133,18 @@ SOURCES: List[Dict[str, object]] = [
         "paginate": False,
     },
     {
+        # Educarriere.ci : 1er site emploi ivoirien. Board server-rendered (pas de
+        # JSON-LD) sur le sous-domaine emploi.educarriere.ci ; parser HTML dédié.
+        # `/emploi/page/all` liste ~28 offres récentes (liens /offre-{id}-{slug}.html).
+        "name": "Educarriere",
+        "base": "https://emploi.educarriere.ci",
+        "listing_path": "/emploi/page/all",
+        "mode": "educarriere_html",
+        "offer_re": re.compile(r"/offre-\d+-[a-z0-9-]+\.html", re.I),
+        "id_re": re.compile(r"/offre-(\d+)-"),
+        "paginate": False,
+    },
+    {
         # Tectra (intérim/recrutement, Maroc) : job board sur la plateforme SaaS
         # CVParser (SPA Angular) adossée à une API JSON. On consomme directement
         # l'API `/annonces?p=N` (pagination 0-indexée, ~10 offres/page).
@@ -202,7 +215,9 @@ def _extract_external_id(url: str, id_re: Pattern) -> Optional[str]:
 
 
 def _strip_html(text: str) -> str:
-    return re.sub(r"\s+", " ", _HTML_TAG_RE.sub(" ", text or "")).strip()
+    # Retire les balises PUIS décode les entités HTML (&rsquo; &#9679; &amp; …).
+    stripped = _HTML_TAG_RE.sub(" ", text or "")
+    return re.sub(r"\s+", " ", _html_unescape(stripped)).strip()
 
 
 # Canonical contract types. Order matters only for matching keys; the earliest
@@ -395,12 +410,17 @@ def normalize_sector(raw: Optional[str], title: str = "", description: str = "")
     return _classify_sector(title) or _classify_sector(description)
 
 
-async def _fetch(client: httpx.AsyncClient, url: str, retries: int = 2) -> Optional[str]:
-    """GET avec reprises (certains sites comme Novojob sont intermittents)."""
+async def _fetch(
+    client: httpx.AsyncClient, url: str, retries: int = 2, headers: Optional[dict] = None
+) -> Optional[str]:
+    """GET avec reprises (certains sites comme Novojob sont intermittents).
+
+    `headers` (optionnel) surcharge les en-têtes par requête — utile pour une source
+    qui exige un User-Agent de navigateur (ex. Educarriere)."""
     last_err = None
     for attempt in range(retries + 1):
         try:
-            resp = await client.get(url)
+            resp = await client.get(url, headers=headers) if headers else await client.get(url)
             if resp.status_code == 200:
                 return resp.text
             # 429/5xx: ça vaut le coup de réessayer; autres 4xx: inutile.
@@ -687,6 +707,127 @@ async def _collect_cvparser(
     return new_offers
 
 
+# --------------------------------------------------------------------------- #
+# Educarriere.ci : HTML rendu serveur, SANS JSON-LD. Les pages détail exposent les
+# champs en `<li class="list-group-item"><strong>Label:</strong> valeur</li>` et la
+# description dans `<meta property="og:description">`. Mode dédié `educarriere_html`.
+# --------------------------------------------------------------------------- #
+_EDUCARRIERE_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
+
+
+def _educ_field(html: str, label: str) -> Optional[str]:
+    m = re.search(
+        r"<strong>\s*" + re.escape(label) + r"[^<]*</strong>\s*(?:<span[^>]*>)?\s*([^<]+)",
+        html, re.I,
+    )
+    return re.sub(r"\s+", " ", m.group(1)).strip() if m else None
+
+
+def _educ_date(raw: Optional[str]) -> Optional[str]:
+    """'06/07/2026' -> '2026-07-06'."""
+    if not raw:
+        return None
+    m = re.match(r"(\d{2})/(\d{2})/(\d{4})", raw.strip())
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def _map_educarriere(html: str, offer_url: str, source_name: str) -> Optional[Dict[str, object]]:
+    title = None
+    h = re.search(r"<h2[^>]*>(.*?)</h2>", html, re.S | re.I)
+    if h:
+        title = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", h.group(1))).strip()
+    if not title:
+        t = re.search(r"<title>(.*?)</title>", html, re.S | re.I)
+        if t:
+            title = re.sub(r"\s*-\s*Offres d'emploi.*$", "", re.sub(r"<[^>]+>", "", t.group(1))).strip()
+    if not title:
+        return None
+    title = _html_unescape(title)
+
+    metier = _educ_field(html, "Métier")
+    desc = None
+    md = re.search(
+        r'<meta[^>]*property=["\']og:description["\'][^>]*content=["\'](.*?)["\']\s*/?>',
+        html, re.I | re.S,
+    )
+    if md:
+        desc = re.sub(r"^Description (?:du|de) poste\s*:?\s*", "", _strip_html(md.group(1)).strip(), flags=re.I)
+        desc = desc[:4000] or None
+
+    reqs = []
+    niveau = _educ_field(html, "Niveau")
+    exp = _educ_field(html, "Expérience")
+    if niveau:
+        reqs.append(f"Niveau : {niveau}")
+    if exp:
+        reqs.append(f"Expérience : {exp}")
+
+    return {
+        "title": title[:255],
+        # L'employeur réel est masqué derrière un login sur Educarriere.
+        "company": "Recruteur via Educarriere"[:255],
+        "location": normalize_location(_educ_field(html, "Lieu")),
+        "contract_type": normalize_contract_type(title),
+        "sector": normalize_sector(metier, title, desc or ""),
+        "description": desc,
+        "requirements": " · ".join(reqs) or None,
+        "salary_range": None,
+        "source": source_name,
+        "source_url": offer_url,
+        "posted_date": _educ_date(_educ_field(html, "Date de publication")),
+        "valid_through": _educ_date(_educ_field(html, "Date limite")),
+        "is_active": True,
+    }
+
+
+async def _collect_educarriere(
+    client: httpx.AsyncClient, source: Dict[str, object], existing_ids: set, existing_urls: set, limit: int
+) -> List[Dict[str, object]]:
+    """Mode 'educarriere_html' : liste server-rendered → crawl des pages détail (HTML)."""
+    name = str(source["name"])
+    base = str(source["base"]).rstrip("/")
+    offer_re: Pattern = source["offer_re"]  # type: ignore[assignment]
+    id_re: Pattern = source["id_re"]  # type: ignore[assignment]
+    headers = {"User-Agent": _EDUCARRIERE_UA}
+
+    list_html = await _fetch(client, base + str(source["listing_path"]), headers=headers)
+    if not list_html:
+        return []
+
+    seen, urls = set(), []
+    for m in offer_re.finditer(list_html):
+        path = m.group(0)
+        url = path if path.startswith("http") else base + path
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
+    logger.info("Aggregator[%s]: %d offres listées", name, len(urls))
+
+    new_offers: List[Dict[str, object]] = []
+    for url in urls:
+        if len(new_offers) >= limit:
+            break
+        if url in existing_urls:
+            continue
+        ext_id = _extract_external_id(url, id_re)
+        if ext_id and ext_id in existing_ids:
+            continue
+        html = await _fetch(client, url, headers=headers)
+        await asyncio.sleep(0.7)
+        if not html:
+            continue
+        offer = _map_educarriere(html, url, name)
+        if offer:
+            new_offers.append(offer)
+            existing_urls.add(url)
+            if ext_id:
+                existing_ids.add(ext_id)
+    return new_offers
+
+
 async def collect_source(
     client: httpx.AsyncClient, source: Dict[str, object], existing_ids: set, existing_urls: set, limit: int
 ) -> List[Dict[str, object]]:
@@ -696,6 +837,9 @@ async def collect_source(
 
     if source.get("mode") == "cvparser_api":
         return await _collect_cvparser(client, source, existing_ids, existing_urls, limit)
+
+    if source.get("mode") == "educarriere_html":
+        return await _collect_educarriere(client, source, existing_ids, existing_urls, limit)
 
     if source.get("mode") == "listing_jsonld":
         return await _collect_listing_jsonld(client, source, existing_ids, existing_urls, limit)
