@@ -15,7 +15,7 @@
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
-    --bg: #0f0c29;
+    --bg: #0a1f24;
     --card: rgba(255,255,255,0.07);
     --card-border: rgba(255,255,255,0.12);
     --text: #f1f5f9;
@@ -26,7 +26,7 @@
 
   body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0f0c29 0%, #143b40 50%, #24243e 100%);
+    background: linear-gradient(135deg, #0a1f24 0%, #143b40 50%, #11333a 100%);
     min-height: 100vh;
     color: var(--text);
     overflow-x: hidden;
@@ -40,7 +40,7 @@
   .particle {
     position: absolute;
     width: 3px; height: 3px;
-    background: rgba(129,140,248,0.4);
+    background: rgba(46,156,168,0.4);
     border-radius: 50%;
     animation: float linear infinite;
   }
@@ -367,8 +367,8 @@
     flex-shrink: 0;
   }
   .btn-pause-exam:hover {
-    background: rgba(124,58,237,0.4);
-    border-color: rgba(124,58,237,0.7);
+    background: rgba(19,78,84,0.4);
+    border-color: rgba(19,78,84,0.7);
     transform: scale(1.08);
   }
 
@@ -418,13 +418,13 @@
     width: 100%; margin-top: 12px;
     padding: 15px 18px; border-radius: 14px; cursor: pointer;
     font-family: inherit; font-size: 1rem; font-weight: 700; color: #fff;
-    border: 1px solid rgba(124,58,237,0.5);
-    background: linear-gradient(135deg, rgba(124,58,237,0.35), rgba(31,111,120,0.25));
+    border: 1px solid rgba(19,78,84,0.5);
+    background: linear-gradient(135deg, rgba(19,78,84,0.35), rgba(31,111,120,0.25));
     transition: transform 0.15s, box-shadow 0.2s;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
   .course-btn small { font-weight: 400; font-size: 0.72rem; color: var(--text-muted); }
-  .course-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(124,58,237,0.4); }
+  .course-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(19,78,84,0.4); }
 
   /* ===== REVISION SCREEN ===== */
   #screen-revision.active { align-items: flex-start; }
@@ -486,7 +486,7 @@
     margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
   }
   .sujet-title .lettre {
-    background: rgba(129,140,248,0.18); color: var(--primary-light);
+    background: rgba(46,156,168,0.18); color: var(--primary-light);
     width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;
   }
@@ -518,7 +518,7 @@
   .flash-domain {
     align-self: flex-start; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
     padding: 4px 12px; border-radius: 20px; margin-bottom: 18px;
-    background: rgba(129,140,248,0.18); color: var(--primary-light); letter-spacing: 0.5px;
+    background: rgba(46,156,168,0.18); color: var(--primary-light); letter-spacing: 0.5px;
   }
   .flash-q { font-size: 1.12rem; font-weight: 600; line-height: 1.55; }
   .flash-reveal {
@@ -1090,7 +1090,7 @@
   .review-launch.err:hover { border-color: var(--danger); background: rgba(239,68,68,0.12); }
   .review-launch:disabled { opacity: 0.4; cursor: not-allowed; }
   .review-launch:disabled:hover { border-color: var(--card-border); background: rgba(255,255,255,0.05); }
-  .timer-chip.training { background: rgba(124,58,237,0.25); color: var(--primary-light); }
+  .timer-chip.training { background: rgba(19,78,84,0.25); color: var(--primary-light); }
 
   /* ===== PRINT ===== */
   @media print {
@@ -9395,7 +9395,7 @@ function exportResults() {
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <title>Résultat Simulation PMP</title>
     <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;margin:32px;line-height:1.5;}
+      body{font-family:Arial,Helvetica,sans-serif;color:#0f2a2f;margin:32px;line-height:1.5;}
       h1{margin:0 0 4px;} .sub{color:#666;margin-bottom:20px;font-size:14px;}
       .hero{font-size:42px;font-weight:800;color:${passed ? '#10b981' : '#ef4444'};}
       .verdict{font-weight:700;color:${passed ? '#10b981' : '#ef4444'};}
