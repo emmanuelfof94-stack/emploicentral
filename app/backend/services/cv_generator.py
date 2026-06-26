@@ -137,6 +137,27 @@ def _split_skills(raw: Optional[str]) -> List[str]:
     return out
 
 
+# Mots vides (FR/EN) + termes de recrutement génériques à exclure des mots-clés ATS.
+_KEYWORD_STOPWORDS = {
+    # articles / prépositions / liaisons (FR)
+    "pour", "avec", "sans", "dans", "chez", "sous", "vers", "entre", "selon", "afin",
+    "vous", "nous", "votre", "notre", "leur", "leurs", "cette", "cet", "ces", "celui",
+    "sont", "être", "etre", "avoir", "fait", "faire", "plus", "tout", "tous", "toute",
+    "toutes", "très", "tres", "aussi", "ainsi", "donc", "mais", "comme", "que", "qui",
+    "des", "les", "une", "aux", "ses", "son", "sur", "par", "est", "ont",
+    # anglais courants
+    "the", "and", "for", "with", "you", "your", "our", "are", "this", "that", "from",
+    # termes de recrutement / offres (pas des compétences)
+    "recrute", "recrutons", "recrutement", "recherche", "recherchons", "cherche",
+    "poste", "postes", "offre", "offres", "emploi", "emplois", "contrat", "contrats",
+    "mission", "missions", "profil", "profils", "candidat", "candidate", "candidats",
+    "candidature", "entreprise", "société", "societe", "groupe", "stage", "stagiaire",
+    "alternance", "alternant", "intérim", "interim", "junior", "senior", "confirmé",
+    "confirme", "débutant", "debutant", "expérimenté", "experimente", "temps", "plein",
+    "partiel", "homme", "femme", "ville", "abidjan", "dakar", "côte", "cote", "ivoire",
+}
+
+
 def extract_job_keywords(job: Dict[str, Any]) -> List[str]:
     """Compétences/mots-clés saillants de l'offre (titre + exigences + description)."""
     text = " ".join(
@@ -228,9 +249,14 @@ def build_cv_content(
     # Compétences : correspondantes d'abord, puis le reste.
     skills_ordered = matched + others
 
-    # Mots-clés ATS : compétences correspondantes + intitulé du poste cible.
+    # Mots-clés ATS : compétences correspondantes + compétences réelles de l'offre
+    # + mots significatifs du titre (stopwords et termes de recrutement filtrés).
+    title_words = [
+        w for w in re.split(r"[^0-9A-Za-zÀ-ÿ]+", str(job.get("title") or ""))
+        if len(w) >= 4 and not w.isdigit() and w.lower() not in _KEYWORD_STOPWORDS
+    ]
     ats_keywords: List[str] = []
-    for kw in matched + [w for w in re.split(r"\W+", str(job.get("title") or "")) if len(w) > 2]:
+    for kw in matched + extract_job_keywords(job) + title_words:
         k = kw.strip()
         if k and k.lower() not in {x.lower() for x in ats_keywords}:
             ats_keywords.append(k)
