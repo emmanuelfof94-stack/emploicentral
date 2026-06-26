@@ -6,6 +6,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AnalyticsTracker from './components/AnalyticsTracker';
+import InstallPrompt from './components/InstallPrompt';
+import WhatsappFab from './components/WhatsappFab';
 import Index from './pages/Index';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -64,6 +66,8 @@ const App = () => (
         <AuthProvider>
           <AnalyticsTracker />
           <AppRoutes />
+          <InstallPrompt />
+          <WhatsappFab />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

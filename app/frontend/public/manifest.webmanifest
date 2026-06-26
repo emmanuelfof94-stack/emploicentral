@@ -1,0 +1,16 @@
+{
+  "name": "EmploiCentral",
+  "short_name": "EmploiCentral",
+  "description": "Trouvez un emploi et formez-vous — Côte d'Ivoire & Afrique de l'Ouest.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "lang": "fr",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

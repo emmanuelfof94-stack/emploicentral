@@ -30,7 +30,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette } from 'lucide-react';
+import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette, MessageCircle } from 'lucide-react';
+import { waShareUrl } from '../lib/whatsapp';
 
 interface ScoreItem {
   job_id: number;
@@ -511,6 +512,19 @@ export default function Jobs() {
                         <SelectItem value="rejected">Rejeté</SelectItem>
                       </SelectContent>
                     </Select>
+                    <a
+                      href={waShareUrl(
+                        `${selectedJob.title} chez ${selectedJob.company}` +
+                          (selectedJob.location ? ` — ${selectedJob.location}` : '') +
+                          `\n${selectedJob.source_url || `${window.location.origin}/jobs`}`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 h-9 rounded-md px-3 text-sm font-medium text-[#128C7E] border border-[#25D366] bg-[#25D366]/10 hover:bg-[#25D366]/20 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Partager
+                    </a>
                   </div>
 
                   {selectedJob.description && (

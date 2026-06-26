@@ -30,5 +30,16 @@ async function initializeApp() {
   createRoot(document.getElementById('root')!).render(<App />);
 }
 
+// Enregistre le service worker (PWA installable). Best-effort, après le chargement.
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch((err) => console.warn('Service worker registration failed:', err));
+  });
+}
+
 // Initialize the app
 initializeApp();
+registerServiceWorker();
