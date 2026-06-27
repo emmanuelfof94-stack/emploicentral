@@ -1,0 +1,24 @@
+name: keep-alive
+
+# Garde l'app Render "réveillée" pendant les heures actives (évite les cold starts
+# de l'offre gratuite). Ping /health toutes les 10 min entre 06:00 et 22:59 UTC
+# (≈ heures actives en Afrique de l'Ouest). La nuit, l'app peut dormir → on reste
+# largement sous le quota gratuit Render (~750 h/mois).
+on:
+  schedule:
+    - cron: '*/10 6-22 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 60 https://emploicentral.onrender.com/health || echo 000)
+            echo "tentative $i -> HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "health non OK après 3 tentatives"
