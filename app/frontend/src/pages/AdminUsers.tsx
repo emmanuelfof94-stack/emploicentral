@@ -30,6 +30,8 @@ import {
   FileCheck2,
   Briefcase,
   Download,
+  Monitor,
+  Globe,
 } from 'lucide-react';
 
 function fmtDate(d?: string) {
@@ -95,6 +97,20 @@ function UserActivity({ userId }: { userId: string }) {
           Inscrit le {fmtDate(u.created_at)} · Dernière connexion : {fmtDateTime(u.last_login)} ·{' '}
           {u.auth_type === 'platform' ? 'Compte plateforme' : 'Compte email/mot de passe'}
         </div>
+        {(u.last_login_location || u.last_login_device) && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            {u.last_login_location && (
+              <span className="inline-flex items-center gap-1">
+                <Globe className="w-3.5 h-3.5" /> {u.last_login_location}
+              </span>
+            )}
+            {u.last_login_device && (
+              <span className="inline-flex items-center gap-1">
+                <Monitor className="w-3.5 h-3.5" /> {u.last_login_device}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Compteurs */}
@@ -142,6 +158,25 @@ function UserActivity({ userId }: { userId: string }) {
               {t.level && <span className="text-slate-400"> · {t.level}</span>}
             </span>
             <span className="text-xs text-slate-400 shrink-0">{fmtDate(t.created_at)}</span>
+          </li>
+        ))}
+      </Section>
+
+      {/* Historique des connexions : d'où et avec quel appareil */}
+      <Section title="Connexions (lieu & appareil)" icon={Globe} empty="Aucune connexion enregistrée.">
+        {(data.logins ?? []).map((l, i) => (
+          <li key={`login-${i}`} className="py-2 flex items-start justify-between gap-3">
+            <span className="text-sm text-slate-700 min-w-0">
+              <span className="inline-flex items-center gap-1">
+                <Monitor className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                {l.device || 'Appareil inconnu'}
+              </span>
+              <span className="block text-xs text-slate-400 mt-0.5">
+                {l.location || l.ip || 'Lieu inconnu'}
+                {l.auth_type && <span> · {l.auth_type}</span>}
+              </span>
+            </span>
+            <span className="text-xs text-slate-400 shrink-0">{fmtDateTime(l.at)}</span>
           </li>
         ))}
       </Section>
@@ -296,6 +331,11 @@ export default function AdminUsers() {
                       <div className="text-[11px] text-slate-400">
                         Vu : {fmtDateTime(u.last_login)}
                       </div>
+                      {(u.last_login_location || u.last_login_device) && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 max-w-[180px] truncate">
+                          {[u.last_login_location, u.last_login_device].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

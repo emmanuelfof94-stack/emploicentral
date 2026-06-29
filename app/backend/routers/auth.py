@@ -17,7 +17,7 @@ from core.auth import (
 from core.config import settings
 from core.database import get_db
 from dependencies.auth import get_current_user
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from models.auth import User
 from schemas.auth import (
@@ -33,6 +33,7 @@ from schemas.auth import (
 )
 from services import rate_limit
 from services.auth import AuthService
+from services.login_tracking import client_ip, client_user_agent, record_login
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
@@ -119,6 +120,7 @@ async def login(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/callback")
 async def callback(
     request: Request,
+    background_tasks: BackgroundTasks,
     code: Optional[str] = None,
     state: Optional[str] = None,
     error: Optional[str] = None,
@@ -210,6 +212,15 @@ async def callback(
         email = id_claims.get("email", "")
         name = id_claims.get("name") or derive_name_from_email(email)
         user = await auth_service.get_or_create_user(platform_sub=id_claims["sub"], email=email, name=name)
+
+        # Trace de connexion (d'où / quel appareil), en tâche de fond — n'impacte pas le login.
+        background_tasks.add_task(
+            record_login,
+            user_id=user.id,
+            ip=client_ip(request),
+            user_agent=client_user_agent(request),
+            auth_type="platform",
+        )
 
         # Issue application JWT token encapsulating user information
         app_token, expires_at, _ = await auth_service.issue_app_token(user=user)
@@ -327,7 +338,12 @@ async def exchange_platform_token(
 
 
 @router.post("/register", response_model=LocalAuthResponse)
-async def register_local(payload: LocalRegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register_local(
+    payload: LocalRegisterRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     """Register a new local (email/password) account and return an app token."""
     auth_service = AuthService(db)
     try:
@@ -337,12 +353,26 @@ async def register_local(payload: LocalRegisterRequest, db: AsyncSession = Depen
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
+    # Trace de la 1ʳᵉ connexion (d'où / quel appareil), en tâche de fond.
+    background_tasks.add_task(
+        record_login,
+        user_id=user.id,
+        ip=client_ip(request),
+        user_agent=client_user_agent(request),
+        auth_type="register",
+    )
+
     app_token, expires_at, _ = await auth_service.issue_app_token(user=user)
     return LocalAuthResponse(token=app_token, expires_at=int(expires_at.timestamp()))
 
 
 @router.post("/login", response_model=LocalAuthResponse)
-async def login_local(payload: LocalLoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+async def login_local(
+    payload: LocalLoginRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     """Authenticate with email/password and return an app token.
 
     Protégé contre la force brute : après plusieurs échecs (par IP+email et par IP),
@@ -370,6 +400,15 @@ async def login_local(payload: LocalLoginRequest, request: Request, db: AsyncSes
 
     # Connexion réussie → on efface le compteur d'échecs pour ce couple IP+email.
     rate_limit.reset(email_key)
+
+    # Trace de connexion (d'où / quel appareil), en tâche de fond — n'impacte pas le login.
+    background_tasks.add_task(
+        record_login,
+        user_id=user.id,
+        ip=ip,
+        user_agent=client_user_agent(request),
+        auth_type="local",
+    )
 
     app_token, expires_at, _ = await auth_service.issue_app_token(user=user, remember=payload.remember)
     return LocalAuthResponse(token=app_token, expires_at=int(expires_at.timestamp()))
