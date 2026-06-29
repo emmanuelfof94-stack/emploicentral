@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, Bookmark, ExternalLink, Palette, MessageCircle, Mic, Sparkles } from 'lucide-react';
+import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, CalendarDays, Bookmark, ExternalLink, Palette, MessageCircle, Mic, Sparkles } from 'lucide-react';
 import { waShareUrl } from '../lib/whatsapp';
 
 interface ScoreItem {
@@ -66,6 +66,37 @@ function expiryInfo(
   if (days <= 7) return { label: `Expire dans ${days} jours`, urgent: true, soon, days };
   const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   return { label: `Expire le ${dateStr}`, urgent: false, soon: false, days };
+}
+
+// Human-readable "published" label. Prefer the source's posted_date when it's a
+// sane value, otherwise fall back to created_at (when the offer entered our DB),
+// because some sources emit bogus dates (epoch-ish or in the future).
+function publishedInfo(postedDate?: string, createdAt?: string): { label: string } | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const minValid = new Date(today);
+  minValid.setFullYear(minValid.getFullYear() - 1); // ignore offers "published" > 1 an ago
+
+  const parse = (s?: string) => {
+    if (!s) return null;
+    const d = new Date(s.length <= 10 ? `${s}T00:00:00` : s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  let d = parse(postedDate);
+  if (!d || d.getTime() > today.getTime() || d.getTime() < minValid.getTime()) {
+    d = parse(createdAt); // posted_date absent / futur / trop vieux → repli
+  }
+  if (!d) return null;
+
+  const day = new Date(d);
+  day.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - day.getTime()) / 86400000);
+  if (days <= 0) return { label: "Publié aujourd'hui" };
+  if (days === 1) return { label: 'Publié hier' };
+  if (days <= 30) return { label: `Publié il y a ${days} jours` };
+  const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return { label: `Publié le ${dateStr}` };
 }
 
 export default function Jobs() {
@@ -338,6 +369,7 @@ export default function Jobs() {
             {filteredJobs.map((job) => {
               const sc = scoreById.get(job.id);
               const exp = expiryInfo(job.valid_through);
+              const pub = publishedInfo(job.posted_date, job.created_at);
               return (
                 <Card
                   key={job.id}
@@ -400,6 +432,12 @@ export default function Jobs() {
                         <div className="flex items-center gap-1.5">
                           <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                           {job.contract_type}
+                        </div>
+                      )}
+                      {pub && (
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                          {pub.label}
                         </div>
                       )}
                       {exp && (
@@ -466,6 +504,16 @@ export default function Jobs() {
                     {selectedJob.salary_range && (
                       <span className="flex items-center gap-1"><Banknote className="w-4 h-4 text-slate-400" />{selectedJob.salary_range}</span>
                     )}
+                    {(() => {
+                      const pub = publishedInfo(selectedJob.posted_date, selectedJob.created_at);
+                      if (!pub) return null;
+                      return (
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="w-4 h-4 text-slate-400" />
+                          {pub.label}
+                        </span>
+                      );
+                    })()}
                     {(() => {
                       const exp = expiryInfo(selectedJob.valid_through);
                       if (!exp) return null;

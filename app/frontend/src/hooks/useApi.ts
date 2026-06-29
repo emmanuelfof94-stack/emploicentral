@@ -36,6 +36,7 @@ export interface Job {
   is_active?: boolean;
   source?: string;
   source_url?: string;
+  created_at?: string;
 }
 
 export interface AlertPrefs {

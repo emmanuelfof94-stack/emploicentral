@@ -495,6 +495,31 @@ def _parse_job_posting(html: str) -> Optional[Dict[str, object]]:
     return found[0] if found else None
 
 
+def _sane_posted_date(raw: Optional[str]) -> Optional[str]:
+    """Assainit une date de publication issue d'une source (souvent peu fiable).
+
+    Certaines sources émettent des `datePosted` aberrantes : date epoch-ish
+    (ex. '2020-01-01'), date dans le futur, ou format inattendu. On ne garde la
+    date que si elle est plausible : parseable, pas dans le futur, et pas plus
+    vieille d'un an (ces boards ne listent que des offres récentes). Sinon on
+    renvoie None — l'offre retombe alors sur `created_at` côté affichage.
+    Retour : 'YYYY-MM-DD' ou None.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    head = raw.strip()[:10]
+    try:
+        d = datetime.strptime(head, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    today = datetime.now().date()
+    if d > today:
+        return None  # date future → invalide
+    if (today - d).days > 365:
+        return None  # trop vieille → vraisemblablement bidon
+    return head
+
+
 def _map_to_offer(posting: Dict[str, object], source_url: str, source_name: str) -> Optional[Dict[str, object]]:
     """Transforme un JobPosting schema.org en ligne `job_offers`."""
     title = (posting.get("title") or "").strip() if isinstance(posting.get("title"), str) else ""
@@ -540,10 +565,8 @@ def _map_to_offer(posting: Dict[str, object], source_url: str, source_name: str)
             if amt:
                 salary_range = f"{amt} {cur} {unit}".strip()
 
-    posted_date = None
     dp = posting.get("datePosted")
-    if isinstance(dp, str) and dp:
-        posted_date = dp[:10]  # partie date (YYYY-MM-DD)
+    posted_date = _sane_posted_date(dp if isinstance(dp, str) else None)
 
     valid_through = None
     vt = posting.get("validThrough")
@@ -638,10 +661,8 @@ def _map_cvparser_offer(
         reqs.append(f"Formation : {str(o['formation']).strip()}")
     requirements = " · ".join(reqs) or None
 
-    posted_date = None
     dt = o.get("date")
-    if isinstance(dt, str) and dt:
-        posted_date = dt[:10]  # "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DD"
+    posted_date = _sane_posted_date(dt if isinstance(dt, str) else None)
 
     return {
         "title": title[:255],
@@ -777,7 +798,7 @@ def _map_educarriere(html: str, offer_url: str, source_name: str) -> Optional[Di
         "salary_range": None,
         "source": source_name,
         "source_url": offer_url,
-        "posted_date": _educ_date(_educ_field(html, "Date de publication")),
+        "posted_date": _sane_posted_date(_educ_date(_educ_field(html, "Date de publication"))),
         "valid_through": _educ_date(_educ_field(html, "Date limite")),
         "is_active": True,
     }
