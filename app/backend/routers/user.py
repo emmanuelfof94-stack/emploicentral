@@ -7,6 +7,7 @@ from core.database import get_db
 from dependencies.auth import get_admin_user, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from models.auth import User
+from models.login_events import LoginEvent
 from models.user_profiles import User_profiles
 from pydantic import BaseModel
 from schemas.auth import UserResponse
@@ -15,6 +16,20 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
+
+
+def _format_device(ev: "LoginEvent") -> Optional[str]:
+    """Résumé lisible de l'appareil, ex. « Mobile · Android · Chrome »."""
+    parts = [p for p in (ev.device, ev.os, ev.browser) if p]
+    return " · ".join(parts) if parts else None
+
+
+def _format_location(ev: "LoginEvent") -> Optional[str]:
+    """Résumé lisible du lieu, ex. « Abidjan, Côte d'Ivoire » (sinon l'IP, sinon None)."""
+    parts = [p for p in (ev.city, ev.country) if p]
+    if parts:
+        return ", ".join(parts)
+    return ev.ip or None
 
 
 class UpdateProfileRequest(BaseModel):
@@ -35,6 +50,10 @@ class AdminUserRow(BaseModel):
     sector: Optional[str] = None
     job_title: Optional[str] = None
     cv_analyzed: Optional[bool] = None
+    # Dernière connexion : d'où et avec quel appareil (déduits de l'IP / du User-Agent).
+    last_login_ip: Optional[str] = None
+    last_login_location: Optional[str] = None
+    last_login_device: Optional[str] = None
 
 
 class AdminUsersResponse(BaseModel):
@@ -66,9 +85,21 @@ async def admin_list_users(
         )).scalars().all()
         profiles = {p.user_id: p for p in rows}
 
+    # Dernière connexion par utilisateur (1 requête, plus récente d'abord → on garde la 1ʳᵉ vue).
+    last_logins = {}
+    if ids:
+        ev_rows = (await db.execute(
+            select(LoginEvent)
+            .where(LoginEvent.user_id.in_(ids))
+            .order_by(LoginEvent.created_at.desc().nullslast())
+        )).scalars().all()
+        for ev in ev_rows:
+            last_logins.setdefault(ev.user_id, ev)
+
     items: List[AdminUserRow] = []
     for u in users:
         p = profiles.get(u.id)
+        ev = last_logins.get(u.id)
         # full_name du profil prioritaire sur le name du compte.
         display_name = (p.full_name if p and p.full_name else None) or u.name
         row = AdminUserRow(
@@ -84,6 +115,9 @@ async def admin_list_users(
             sector=(p.sector if p else None),
             job_title=(p.job_title if p else None),
             cv_analyzed=(p.cv_analyzed if p else None),
+            last_login_ip=(ev.ip if ev else None),
+            last_login_location=(_format_location(ev) if ev else None),
+            last_login_device=(_format_device(ev) if ev else None),
         )
         if q:
             needle = q.strip().lower()
@@ -113,6 +147,17 @@ async def admin_export_users(
         )).scalars().all()
         profiles = {p.user_id: p for p in rows}
 
+    # Dernière connexion par utilisateur (lieu / appareil), 1 requête.
+    last_logins = {}
+    if ids:
+        ev_rows = (await db.execute(
+            select(LoginEvent)
+            .where(LoginEvent.user_id.in_(ids))
+            .order_by(LoginEvent.created_at.desc().nullslast())
+        )).scalars().all()
+        for ev in ev_rows:
+            last_logins.setdefault(ev.user_id, ev)
+
     buf = io.StringIO()
     buf.write("﻿")  # BOM UTF-8 → accents corrects à l'ouverture dans Excel
     # Séparateur ';' = compatible Excel en locale française.
@@ -120,6 +165,7 @@ async def admin_export_users(
     writer.writerow([
         "Nom", "Email", "Rôle", "Type de compte", "Inscription",
         "Dernière connexion", "Téléphone", "Ville", "Secteur", "Métier", "CV analysé",
+        "Lieu dernière connexion", "Appareil dernière connexion", "IP dernière connexion",
     ])
 
     def dt(value) -> str:
@@ -127,6 +173,7 @@ async def admin_export_users(
 
     for u in users:
         p = profiles.get(u.id)
+        ev = last_logins.get(u.id)
         name = (p.full_name if p and p.full_name else None) or u.name or ""
         writer.writerow([
             name,
@@ -140,6 +187,9 @@ async def admin_export_users(
             (p.sector if p else "") or "",
             (p.job_title if p else "") or "",
             "Oui" if (p and p.cv_analyzed) else "Non",
+            (_format_location(ev) if ev else "") or "",
+            (_format_device(ev) if ev else "") or "",
+            (ev.ip if ev else "") or "",
         ])
 
     return Response(
@@ -166,12 +216,22 @@ class AdminTrainingActivity(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class AdminLoginActivity(BaseModel):
+    """Une connexion : quand, d'où (lieu / IP) et avec quel appareil."""
+    at: Optional[datetime] = None
+    ip: Optional[str] = None
+    location: Optional[str] = None
+    device: Optional[str] = None
+    auth_type: Optional[str] = None
+
+
 class AdminUserActivity(BaseModel):
     user: AdminUserRow
     counts: dict
     saved_jobs: List[AdminJobActivity]
     applications: List[AdminJobActivity]
     trainings: List[AdminTrainingActivity]
+    logins: List[AdminLoginActivity] = []
 
 
 @router.get("/admin/{user_id}/activity", response_model=AdminUserActivity)
@@ -251,12 +311,37 @@ async def admin_user_activity(
         select(func.count()).select_from(Notification).where(Notification.user_id == user_id)
     )).scalar() or 0
 
+    # Historique des connexions (d'où / quel appareil), les plus récentes d'abord.
+    login_rows = (await db.execute(
+        select(LoginEvent)
+        .where(LoginEvent.user_id == user_id)
+        .order_by(LoginEvent.created_at.desc().nullslast())
+        .limit(50)
+    )).scalars().all()
+    logins = [
+        AdminLoginActivity(
+            at=ev.created_at,
+            ip=ev.ip,
+            location=_format_location(ev),
+            device=_format_device(ev),
+            auth_type=ev.auth_type,
+        )
+        for ev in login_rows
+    ]
+    # Enrichit la fiche avec la dernière connexion connue (lieu / appareil).
+    if login_rows:
+        latest = login_rows[0]
+        user_row.last_login_ip = latest.ip
+        user_row.last_login_location = _format_location(latest)
+        user_row.last_login_device = _format_device(latest)
+
     counts = {
         "saved_jobs": len(saved_jobs),
         "applications": len(applications),
         "trainings": len(training_items),
         "notifications": int(notif_count),
         "cv_analyzed": bool(user_row.cv_analyzed),
+        "logins": len(login_rows),
     }
 
     return AdminUserActivity(
@@ -265,6 +350,7 @@ async def admin_user_activity(
         saved_jobs=saved_jobs,
         applications=applications,
         trainings=training_items,
+        logins=logins,
     )
 
 

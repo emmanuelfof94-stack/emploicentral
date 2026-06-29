@@ -535,6 +535,17 @@ export interface AdminUserRow {
   sector?: string;
   job_title?: string;
   cv_analyzed?: boolean;
+  last_login_ip?: string;
+  last_login_location?: string;
+  last_login_device?: string;
+}
+
+export interface AdminLoginActivity {
+  at?: string;
+  ip?: string;
+  location?: string;
+  device?: string;
+  auth_type?: string;
 }
 
 export interface AdminJobActivity {
@@ -560,6 +571,7 @@ export interface AdminUserActivity {
   saved_jobs: AdminJobActivity[];
   applications: AdminJobActivity[];
   trainings: AdminTrainingActivity[];
+  logins: AdminLoginActivity[];
 }
 
 export function useAdminUsers(q = '', enabled = true) {
