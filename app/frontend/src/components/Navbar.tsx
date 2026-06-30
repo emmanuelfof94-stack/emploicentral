@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlertMatches } from '../hooks/useAlertMatches';
+import BrandLogo from './BrandLogo';
 import {
   LayoutDashboard,
   Briefcase,
@@ -70,18 +71,8 @@ export default function Navbar() {
     <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30">
-              <Briefcase className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-slate-900 leading-tight">
-                JobMatch <span className="text-blue-600">AI</span>
-              </span>
-              <span className="text-[10px] text-slate-400 leading-tight hidden sm:block">
-                Côte d&apos;Ivoire & Afrique de l&apos;Ouest
-              </span>
-            </div>
+          <Link to="/dashboard">
+            <BrandLogo size="md" tagline />
           </Link>
 
           {/* Desktop links */}

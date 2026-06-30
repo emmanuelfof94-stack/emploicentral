@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import BrandLogo from '../components/BrandLogo';
 import {
   ArrowRight,
   FileSearch,
   Target,
   BellRing,
-  Briefcase,
   CheckCircle2,
   MapPin,
   Building2,
@@ -28,14 +28,14 @@ const features = [
     title: 'Score de compatibilité',
     description:
       "Obtenez un score de correspondance précis entre votre profil et chaque offre, avec vos points forts et axes d'amélioration.",
-    color: 'bg-violet-100 text-violet-600',
+    color: 'bg-terracotta-100 text-terracotta-600',
   },
   {
     icon: BellRing,
     title: 'Alertes intelligentes',
     description:
       "Définissez vos critères et soyez notifié dès qu'une nouvelle offre correspond — à Abidjan, Dakar, Lomé et ailleurs.",
-    color: 'bg-emerald-100 text-emerald-600',
+    color: 'bg-leaf-100 text-leaf-600',
   },
 ];
 
@@ -66,14 +66,7 @@ export default function Landing() {
       {/* Header */}
       <header className="border-b border-slate-200/70 bg-white/70 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30">
-              <Briefcase className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold text-slate-900">
-              JobMatch <span className="text-blue-600">AI</span>
-            </span>
-          </div>
+          <BrandLogo size="md" tagline />
           <div className="flex items-center gap-2">
             <Button onClick={handleGetStarted} variant="ghost" size="sm" className="hidden sm:inline-flex">
               Connexion
@@ -87,28 +80,30 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
+        {/* Motif géométrique ouest-africain très subtil en fond */}
+        <div className="absolute inset-0 bg-kente opacity-70 pointer-events-none" aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-7">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 px-3 py-1 text-xs font-medium">
-                <Sparkles className="w-3.5 h-3.5" /> Matching emploi par IA
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-terracotta-50 text-terracotta-700 ring-1 ring-terracotta-200 px-3 py-1 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5" /> Emploi & formation · propulsé par l&apos;IA
               </span>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
-                Trouvez l&apos;emploi parfait en{' '}
-                <span className="text-brand-gradient">Afrique de l&apos;Ouest</span> grâce à l&apos;IA
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.05] tracking-tight">
+                Votre carrière prend son{' '}
+                <span className="text-warm-gradient">envol</span> en Afrique de l&apos;Ouest
               </h1>
               <p className="text-lg text-slate-600 max-w-lg">
-                Accédez gratuitement aux meilleures offres en Côte d&apos;Ivoire, Sénégal, Togo et
-                au-delà. Notre IA analyse votre CV et vous connecte aux opportunités qui vous
-                correspondent vraiment.
+                D&apos;Abidjan à Dakar, accédez gratuitement aux meilleures offres. Notre IA analyse
+                votre CV et vous connecte aux opportunités qui vous correspondent{' '}
+                <span className="font-semibold text-slate-800">vraiment</span>.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
                   size="lg"
                   onClick={handleGetStarted}
-                  className="bg-brand-gradient hover:opacity-95"
+                  className="bg-warm-gradient hover:opacity-95 shadow-lg shadow-terracotta-500/20"
                 >
-                  S&apos;inscrire gratuitement
+                  Commencer gratuitement
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 <Button size="lg" variant="outline" onClick={handleGetStarted}>
@@ -191,7 +186,9 @@ export default function Landing() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">Comment ça marche</h2>
+            <h2 className="font-display text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
+              Comment ça marche
+            </h2>
             <p className="text-slate-600 max-w-2xl mx-auto">
               Trois étapes simples pour trouver votre emploi idéal.
             </p>
@@ -261,14 +258,18 @@ export default function Landing() {
 
           {/* CTA */}
           <div className="text-center mt-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+            <h2 className="font-display text-3xl font-extrabold text-slate-900 mb-4 tracking-tight">
               Prêt à décrocher votre prochain emploi ?
             </h2>
             <p className="text-slate-600 mb-8 max-w-2xl mx-auto">
               Rejoignez les professionnels ouest-africains qui accèdent gratuitement aux meilleures
               opportunités.
             </p>
-            <Button size="lg" onClick={handleGetStarted} className="bg-brand-gradient hover:opacity-95">
+            <Button
+              size="lg"
+              onClick={handleGetStarted}
+              className="bg-warm-gradient hover:opacity-95 shadow-lg shadow-terracotta-500/20"
+            >
               S&apos;inscrire gratuitement
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

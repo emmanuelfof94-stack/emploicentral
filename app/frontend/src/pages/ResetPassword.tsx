@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Target, Loader2, Eye, EyeOff } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -74,13 +75,8 @@ export default function ResetPassword() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <header className="border-b border-slate-100 bg-white/70 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30">
-              <Target className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold text-slate-900">
-              JobMatch <span className="text-blue-600">AI</span>
-            </span>
+          <Link to="/">
+            <BrandLogo size="md" tagline />
           </Link>
         </div>
       </header>

@@ -2,7 +2,7 @@
 // Stratégie volontairement prudente pour éviter de servir un SPA périmé :
 // - navigations / HTML  -> réseau d'abord, repli cache (offline = dernière page connue)
 // - assets hashés (JS/CSS/img) -> cache d'abord (immuables grâce au hash de build)
-const CACHE = 'emploicentral-v5';
+const CACHE = 'emploicentral-v6';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
