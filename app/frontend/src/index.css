@@ -52,33 +52,34 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 33% 11%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 33% 11%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* On garde un primaire bleu en sombre (cohérent avec la marque) */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 68%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 96%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 45%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 217 33% 20%;
+    --input: 217 33% 22%;
+    --ring: 217 91% 60%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -158,4 +159,77 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.55);
   background-clip: content-box;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Mode sombre — remappage des classes « en dur » (slate/white) que les pages
+   utilisent au lieu des jetons sémantiques. La spécificité `.dark .x` (0,2,0)
+   l'emporte sur l'utilitaire `.x` (0,1,0), sans !important. Les composants
+   shadcn (bg-card, etc.) basculent déjà seuls via les variables ci-dessus.
+   ────────────────────────────────────────────────────────────────────────── */
+/* Texte */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: hsl(210 40% 96%);
+}
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: hsl(215 20% 72%);
+}
+.dark .text-slate-400 {
+  color: hsl(215 16% 58%);
+}
+
+/* Surfaces blanches */
+.dark .bg-white {
+  background-color: hsl(222 33% 11%);
+}
+.dark .bg-white\/70,
+.dark .bg-white\/80,
+.dark .bg-white\/90,
+.dark .bg-white\/95 {
+  background-color: hsl(222 40% 9% / 0.85);
+}
+
+/* Surfaces claires (gris très pâles) */
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-50\/60 {
+  background-color: hsl(217 33% 15%);
+}
+
+/* Bordures */
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-200\/70,
+.dark .border-slate-100\/70 {
+  border-color: hsl(217 33% 22%);
+}
+
+/* Accents bleus pâles (états actifs, puces) */
+.dark .bg-blue-50 {
+  background-color: hsl(217 91% 60% / 0.16);
+}
+.dark .text-blue-700,
+.dark .text-blue-600 {
+  color: hsl(213 94% 72%);
+}
+
+/* États de survol gris */
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: hsl(217 33% 18%);
+}
+
+/* Surface d'app + motif en sombre */
+.dark .app-surface {
+  background:
+    radial-gradient(1100px 520px at 100% -10%, rgba(217, 96, 58, 0.10), transparent 60%),
+    radial-gradient(1000px 500px at -10% 0%, rgba(37, 99, 235, 0.12), transparent 55%),
+    radial-gradient(900px 600px at 60% 110%, rgba(224, 135, 28, 0.07), transparent 60%),
+    hsl(222 47% 7%);
+}
+.dark .bg-kente {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23e8743f' stroke-opacity='0.10' stroke-width='1.4'%3E%3Cpath d='M22 3 L41 22 L22 41 L3 22 Z'/%3E%3C/g%3E%3Ccircle cx='22' cy='22' r='1.6' fill='%23f2bb4f' fill-opacity='0.14'/%3E%3C/svg%3E");
 }

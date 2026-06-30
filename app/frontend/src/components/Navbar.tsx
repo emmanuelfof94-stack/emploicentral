@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlertMatches } from '../hooks/useAlertMatches';
 import BrandLogo from './BrandLogo';
+import ThemeToggle from './ThemeToggle';
 import {
   LayoutDashboard,
   Briefcase,
@@ -105,6 +106,7 @@ export default function Navbar() {
 
           {/* Right side: notifications + user + logout (desktop), burger (mobile) */}
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {user && <NotificationsBell />}
             {user && (
               <span className="text-sm text-slate-600 hidden lg:block">

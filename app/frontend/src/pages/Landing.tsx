@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BrandLogo from '../components/BrandLogo';
+import ThemeToggle from '../components/ThemeToggle';
 import {
   ArrowRight,
   FileSearch,
@@ -68,6 +69,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <BrandLogo size="md" tagline />
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button onClick={handleGetStarted} variant="ghost" size="sm" className="hidden sm:inline-flex">
               Connexion
             </Button>
