@@ -126,8 +126,14 @@ def match_offer(job: Job_offers, pref: Alert_preferences) -> bool:
         hay = f"{job.title} {job.description or ''} {job.requirements or ''}".lower()
         if not any(k in hay for k in keywords):
             return False
-    if pref.min_salary and pref.min_salary > 0 and _max_salary(job.salary_range) < pref.min_salary:
-        return False
+    # Salaire : on ne filtre QUE si l'offre affiche un salaire. Les offres agrégées
+    # n'ont quasi jamais de salaire renseigné ; appliquer min_salary à celles-ci
+    # viderait tout le feed (piège récurrent). On ne rejette donc que les offres
+    # dont le salaire affiché est sous le seuil.
+    if pref.min_salary and pref.min_salary > 0:
+        offer_salary = _max_salary(job.salary_range)
+        if offer_salary and offer_salary < pref.min_salary:
+            return False
     return True
 
 
