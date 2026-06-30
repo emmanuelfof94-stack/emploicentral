@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AnalyticsTracker from './components/AnalyticsTracker';
+import RouteBackground from './components/RouteBackground';
 import InstallPrompt from './components/InstallPrompt';
 import WhatsappFab from './components/WhatsappFab';
 import Index from './pages/Index';
@@ -79,6 +80,7 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <AuthProvider>
+            <RouteBackground />
             <AnalyticsTracker />
             <AppRoutes />
             <InstallPrompt />
