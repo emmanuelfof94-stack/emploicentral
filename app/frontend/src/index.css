@@ -123,13 +123,36 @@
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(110deg, #c14a28 0%, #e0871c 100%);
   }
-  /* Surface d'app : nappes bleu + chaleur (terracotta/or) très diffuses */
+  /* Surface d'app : nappes bleu + chaleur (terracotta/or) très diffuses.
+     Base volontairement transparente pour laisser transparaître la photo de
+     fond propre à chaque onglet (cf. .route-bg / RouteBackground). */
   .app-surface {
     background:
       radial-gradient(1100px 520px at 100% -10%, rgba(217, 96, 58, 0.08), transparent 60%),
       radial-gradient(1000px 500px at -10% 0%, rgba(37, 99, 235, 0.07), transparent 55%),
-      radial-gradient(900px 600px at 60% 110%, rgba(224, 135, 28, 0.06), transparent 60%),
-      #faf7f4;
+      radial-gradient(900px 600px at 60% 110%, rgba(224, 135, 28, 0.06), transparent 60%);
+  }
+  /* Photo de fond évocatrice par onglet (posée par RouteBackground). */
+  .route-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+  /* Voile clair au-dessus de la photo : garde le texte lisible (fond estompé). */
+  .route-bg-veil {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(250, 247, 244, 0.8) 0%,
+      rgba(250, 247, 244, 0.88) 100%
+    );
   }
   /* Motif géométrique subtil (losanges inspirés des tissages ouest-africains) */
   .bg-kente {
