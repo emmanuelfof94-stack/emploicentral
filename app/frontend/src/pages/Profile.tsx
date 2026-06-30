@@ -199,7 +199,7 @@ export default function Profile() {
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Mon profil</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Mon profil</h1>
           <p className="text-slate-500 mt-1">
             Téléchargez votre CV pour une analyse automatique, ou complétez vos informations.
           </p>

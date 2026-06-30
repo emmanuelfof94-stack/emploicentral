@@ -48,9 +48,9 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Greeting */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Bon retour,{' '}
-            <span className="text-brand-gradient">
+            <span className="text-warm-gradient">
               {user?.name || user?.email?.split('@')[0] || 'vous'}
             </span>{' '}
             !
@@ -91,7 +91,7 @@ export default function Dashboard() {
               <div className="text-3xl font-bold text-slate-900 mb-3">{profileCompletion}%</div>
               <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-brand-gradient transition-all duration-500"
+                  className="h-full rounded-full bg-warm-gradient transition-all duration-500"
                   style={{ width: `${profileCompletion}%` }}
                 />
               </div>

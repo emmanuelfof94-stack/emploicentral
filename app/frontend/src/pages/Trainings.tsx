@@ -212,8 +212,8 @@ export default function Trainings() {
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
+          <h1 className="font-display text-2xl font-extrabold tracking-tight flex items-center gap-2">
+            <GraduationCap className="h-6 w-6 text-terracotta-500" />
             Formations
           </h1>
           <p className="text-muted-foreground mt-1">
