@@ -67,22 +67,36 @@ _R = {
     "openai_academy": ("OpenAI Academy", "https://academy.openai.com", "ateliers en direct, tutoriels et ressources IA gratuits"),
     "objectif_ia": ("Objectif IA (OpenClassrooms)", "https://openclassrooms.com/fr/courses/7050006-objectif-ia", "5h pour comprendre l'IA, en français, sans prérequis"),
     "edx": ("edX", "https://www.edx.org", "cours universitaires (ex. « AI For Everyone »), audit gratuit"),
+    "atingi": ("atingi", "https://www.atingi.org", "plateforme gratuite (coopération allemande GIZ) pensée pour l'Afrique : numérique, entrepreneuriat, soft skills"),
+    "mymooc": ("My-Mooc", "https://www.my-mooc.com", "annuaire francophone de MOOC gratuits, tous domaines"),
+    "tv5monde": ("TV5Monde — Apprendre le français", "https://apprendre.tv5monde.com", "français langue étrangère, tous niveaux, gratuit"),
+    "mit_ocw": ("MIT OpenCourseWare", "https://ocw.mit.edu", "cours du MIT en accès libre (sciences, ingénierie, gestion)"),
+    "kaggle": ("Kaggle Learn", "https://www.kaggle.com/learn", "micro-cours gratuits : Python, data science, machine learning"),
+    "canva": ("Canva Design School", "https://www.canva.com/designschool/", "design graphique et visuels, tutoriels gratuits"),
+    "w3schools": ("W3Schools", "https://www.w3schools.com", "HTML, CSS, JavaScript, SQL, Python — tutoriels gratuits"),
+    "sololearn": ("SoloLearn", "https://www.sololearn.com", "apprendre à coder sur mobile, gratuit"),
+    "codecademy": ("Codecademy", "https://www.codecademy.com", "apprendre à coder pas à pas, formule gratuite"),
+    "openlearn": ("OpenLearn (Open University)", "https://www.open.edu/openlearn/", "cours gratuits de l'université ouverte britannique, tous domaines"),
+    "aws": ("AWS Skill Builder", "https://skillbuilder.aws", "cloud computing AWS, fondamentaux gratuits"),
+    "trailhead": ("Salesforce Trailhead", "https://trailhead.salesforce.com", "CRM, administration et développement Salesforce, gratuit et ludique"),
 }
 
 # (mots-clés de thématique) -> clés de ressources prioritaires
 _RESOURCE_RULES = [
     (("excel", "bureautique", "word", "powerpoint", "office"), ["mslearn", "gcf", "openclassrooms", "youtube"]),
-    (("marketing", "community", "digital", "communication", "réseaux", "reseaux"), ["google_ateliers", "hubspot", "meta", "openclassrooms"]),
-    (("anglais", "english", "langue"), ["bbc", "britishcouncil", "youtube"]),
-    (("comptab", "gestion", "finance", "audit", "paie"), ["openclassrooms", "alison", "funmooc", "coursera"]),
-    (("projet", "management", "leadership", "ressources humaines", "rh"), ["coursera", "openclassrooms", "alison"]),
-    (("web", "dévelop", "develop", "data", "données", "donnees", "informatique", "cyber", "program", "code"), ["freecodecamp", "cisco", "openclassrooms", "coursera"]),
-    (("vente", "commercial", "négoci", "negoci", "client"), ["hubspot", "openclassrooms", "coursera", "alison"]),
-    (("ia", "intelligence artificielle", "machine learning", "data science"), ["anthropic", "openai_academy", "googleai", "elementsofai", "objectif_ia", "ibm", "coursera", "mslearn", "edx"]),
-    (("entrepreneur", "création", "creation", "business"), ["coursera", "openclassrooms", "funmooc", "alison"]),
+    (("marketing", "community", "digital", "communication", "réseaux", "reseaux"), ["google_ateliers", "hubspot", "meta", "canva", "openclassrooms"]),
+    (("design", "graphi", "infographie", "visuel", "ux", "ui"), ["canva", "openclassrooms", "youtube", "coursera"]),
+    (("anglais", "english"), ["bbc", "britishcouncil", "youtube"]),
+    (("français", "francais", "langue", "fle"), ["tv5monde", "youtube", "alison"]),
+    (("comptab", "gestion", "finance", "audit", "paie"), ["openclassrooms", "alison", "funmooc", "coursera", "openlearn"]),
+    (("projet", "management", "leadership", "ressources humaines", "rh"), ["coursera", "openclassrooms", "alison", "mymooc", "openlearn"]),
+    (("web", "dévelop", "develop", "data", "données", "donnees", "informatique", "cyber", "program", "code"), ["freecodecamp", "w3schools", "sololearn", "codecademy", "cisco", "aws", "kaggle", "openclassrooms", "coursera"]),
+    (("vente", "commercial", "négoci", "negoci", "client", "crm"), ["hubspot", "trailhead", "openclassrooms", "coursera", "alison"]),
+    (("ia", "intelligence artificielle", "machine learning", "data science"), ["anthropic", "openai_academy", "googleai", "elementsofai", "objectif_ia", "kaggle", "ibm", "coursera", "mslearn", "edx", "mit_ocw"]),
+    (("entrepreneur", "création", "creation", "business", "numérique", "numerique"), ["atingi", "coursera", "openclassrooms", "funmooc", "alison"]),
 ]
 
-_GENERAL_RESOURCES = ["openclassrooms", "coursera", "funmooc", "youtube", "alison"]
+_GENERAL_RESOURCES = ["openclassrooms", "coursera", "funmooc", "atingi", "mymooc", "youtube", "alison"]
 
 
 def _curated_resource_keys(theme: str) -> List[str]:
