@@ -33,9 +33,29 @@ async function initializeApp() {
 // Enregistre le service worker (PWA installable). Best-effort, après le chargement.
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+
+  // Quand un nouveau service worker prend le contrôle (nouvelle version déployée),
+  // on recharge la page une seule fois pour servir l'UI fraîche — fini le cache
+  // périmé qui obligeait à vider les données à la main.
+  // On ignore le tout premier `controllerchange` (déclenché par `clients.claim()`
+  // à l'installation initiale, quand aucun contrôleur n'existait) pour ne pas
+  // recharger inutilement la page lors de la première visite.
+  const hadController = navigator.serviceWorker.controller != null;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
+      .then((reg) => {
+        // Vérifie périodiquement la présence d'une nouvelle version.
+        reg.update().catch(() => {});
+        setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+      })
       .catch((err) => console.warn('Service worker registration failed:', err));
   });
 }
