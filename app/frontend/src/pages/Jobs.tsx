@@ -256,6 +256,8 @@ export default function Jobs() {
   const [sectorFilter, setSectorFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [contractFilter, setContractFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'score' | 'recent'>('score');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // Map job_id → score detail (computed once from the cached batch result)
@@ -280,6 +282,7 @@ export default function Jobs() {
     () => [...new Set(jobs.map((j) => j.contract_type).filter(Boolean))],
     [jobs]
   );
+  const sources = useMemo(() => [...new Set(jobs.map((j) => j.source).filter(Boolean))], [jobs]);
 
   const filteredJobs = useMemo(() => {
     let result = jobs;
@@ -295,11 +298,20 @@ export default function Jobs() {
     if (sectorFilter !== 'all') result = result.filter((j) => j.sector === sectorFilter);
     if (locationFilter !== 'all') result = result.filter((j) => j.location === locationFilter);
     if (contractFilter !== 'all') result = result.filter((j) => j.contract_type === contractFilter);
-    // Sort by score desc when available
-    return [...result].sort(
-      (a, b) => (scoreById.get(b.id)?.score ?? -1) - (scoreById.get(a.id)?.score ?? -1)
-    );
-  }, [jobs, search, sectorFilter, locationFilter, contractFilter, scoreById]);
+    if (sourceFilter !== 'all') result = result.filter((j) => j.source === sourceFilter);
+
+    const sorted = [...result];
+    if (sortBy === 'recent') {
+      // Plus récentes d'abord : date de publication, à défaut date d'ajout.
+      const ts = (j: Job) => j.posted_date || j.created_at || '';
+      sorted.sort((a, b) => ts(b).localeCompare(ts(a)));
+    } else {
+      // Par compatibilité (score). Sans CV analysé, les scores valent -1 → on garde
+      // l'ordre de l'API (id décroissant = plus récentes d'abord).
+      sorted.sort((a, b) => (scoreById.get(b.id)?.score ?? -1) - (scoreById.get(a.id)?.score ?? -1));
+    }
+    return sorted;
+  }, [jobs, search, sectorFilter, locationFilter, contractFilter, sourceFilter, sortBy, scoreById]);
 
   const selectedScore = selectedJob ? scoreById.get(selectedJob.id) : undefined;
 
@@ -310,14 +322,16 @@ export default function Jobs() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Offres d&apos;emploi</h1>
           <p className="text-slate-500 mt-1">
-            {profile?.cv_analyzed
-              ? 'Triées par compatibilité avec votre profil.'
-              : 'Analysez votre CV pour voir votre compatibilité avec chaque offre.'}
+            {sortBy === 'recent'
+              ? 'Triées des plus récentes aux plus anciennes.'
+              : profile?.cv_analyzed
+                ? 'Triées par compatibilité avec votre profil.'
+                : 'Analysez votre CV pour voir votre compatibilité avec chaque offre.'}
           </p>
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
@@ -348,6 +362,38 @@ export default function Jobs() {
               {contractTypes.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
             </SelectContent>
           </Select>
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="bg-white"><SelectValue placeholder="Source" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les sources</SelectItem>
+              {sources.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Tri */}
+        <div className="flex items-center justify-end gap-2 mb-6">
+          <span className="text-xs text-slate-500">Trier :</span>
+          <div className="inline-flex rounded-md border border-slate-200 bg-white overflow-hidden text-sm">
+            <button
+              type="button"
+              onClick={() => setSortBy('score')}
+              className={`px-3 py-1.5 transition-colors ${
+                sortBy === 'score' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Compatibilité
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('recent')}
+              className={`px-3 py-1.5 transition-colors border-l border-slate-200 ${
+                sortBy === 'recent' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Plus récentes
+            </button>
+          </div>
         </div>
 
         {/* Grid */}
@@ -392,6 +438,11 @@ export default function Jobs() {
                           <Building2 className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{job.company}</span>
                         </div>
+                        {job.source && (
+                          <span className="inline-block mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                            {job.source}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {sc != null ? (
