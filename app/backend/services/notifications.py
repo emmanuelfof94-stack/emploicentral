@@ -169,8 +169,25 @@ async def send_email(to_addr: str, subject: str, html: str) -> bool:
 
 
 def _normalize_phone(phone: str) -> str:
+    """Met le numéro au format international E.164 (ex. +2250749109013).
+
+    WhatsApp exige l'indicatif pays. Les numéros ivoiriens sont saisis en local
+    (« 0749109013 ») → on préfixe l'indicatif par défaut (`WHATSAPP_DEFAULT_CC`,
+    225 pour la Côte d'Ivoire) en conservant le 0 initial (format CI post-2021).
+    """
     p = re.sub(r"[^\d+]", "", phone or "")
-    return p
+    if not p:
+        return ""
+    if p.startswith("+"):
+        return p
+    if p.startswith("00"):
+        return "+" + p[2:]
+    cc = _env("WHATSAPP_DEFAULT_CC") or "225"
+    # Numéro déjà préfixé par l'indicatif sans "+" (ex. 2250749109013).
+    if p.startswith(cc) and len(p) >= 12:
+        return "+" + p
+    # Numéro local (commence par 0 en CI) → on ajoute l'indicatif.
+    return "+" + cc + p
 
 
 async def _send_whatsapp_twilio(to_phone: str, body: str) -> bool:
@@ -212,13 +229,52 @@ async def _send_whatsapp_meta(to_phone: str, body: str) -> bool:
         return False
 
 
-async def send_whatsapp(to_phone: str, body: str) -> bool:
+async def _send_whatsapp_meta_template(to_phone: str, name: str, params: List[str], lang: str) -> bool:
+    """Envoi d'un message *template* Meta (obligatoire pour un message proactif
+    hors fenêtre de 24 h). `params` alimente les variables {{1}}, {{2}}… du corps."""
+    token, phone_id = _env("META_WA_TOKEN"), _env("META_WA_PHONE_ID")
+    url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_phone.lstrip("+"),
+        "type": "template",
+        "template": {
+            "name": name,
+            "language": {"code": lang or "fr"},
+            "components": [{
+                "type": "body",
+                "parameters": [{"type": "text", "text": str(p)} for p in params],
+            }] if params else [],
+        },
+    }
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(url, json=payload, headers=headers)
+            if r.status_code >= 400:
+                logger.warning("Meta WhatsApp template %s: HTTP %s %s", to_phone, r.status_code, r.text[:200])
+                return False
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Meta WhatsApp template échoué (%s): %s", to_phone, exc)
+        return False
+
+
+async def send_whatsapp(to_phone: str, body: str, params: Optional[List[str]] = None) -> bool:
     phone = _normalize_phone(to_phone)
     if not phone:
         return False
     if twilio_available():
         return await _send_whatsapp_twilio(phone, body)
     if meta_available():
+        # En production Meta, un message proactif DOIT passer par un template
+        # approuvé. Si `META_WA_TEMPLATE` est défini, on l'utilise ; sinon on
+        # retombe sur le texte libre (valable seulement en fenêtre 24 h / test).
+        template = _env("META_WA_TEMPLATE")
+        if template:
+            return await _send_whatsapp_meta_template(
+                phone, template, params or [], _env("META_WA_TEMPLATE_LANG") or "fr"
+            )
         return await _send_whatsapp_meta(phone, body)
     return False
 
@@ -467,8 +523,13 @@ async def dispatch_new_offer_alerts() -> int:
                                 "subject": _digest_subject(scored_offers),
                                 "html": _digest_email_html(first_name, scored_offers)})
             if whatsapp_ok:
+                # Paramètres du template WhatsApp Meta : {{1}} prénom, {{2}} nb
+                # d'offres, {{3}} lien. (Ignorés si envoi en texte libre.)
+                wa_link = (_env("FRONTEND_URL") or "https://emploicentral.onrender.com").rstrip("/") + "/jobs"
+                wa_params = [first_name or "candidat", str(len(scored_offers)), wa_link]
                 to_send.append({"type": "whatsapp", "to": phone,
-                                "body": _digest_whatsapp_text(first_name, scored_offers)})
+                                "body": _digest_whatsapp_text(first_name, scored_offers),
+                                "params": wa_params})
 
         await session.commit()
 
@@ -477,7 +538,7 @@ async def dispatch_new_offer_alerts() -> int:
         if task["type"] == "email":
             await send_email(task["to"], task["subject"], task["html"])
         elif task["type"] == "whatsapp":
-            await send_whatsapp(task["to"], task["body"])
+            await send_whatsapp(task["to"], task["body"], params=task.get("params"))
 
     if created:
         logger.info("Alertes: %d notification(s) créée(s) (%d envoi(s) externe(s))", created, len(to_send))
