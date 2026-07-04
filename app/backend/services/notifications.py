@@ -321,6 +321,42 @@ async def send_whatsapp_debug(to_phone: str, params: Optional[List[str]] = None)
     return out
 
 
+async def list_whatsapp_templates() -> Dict[str, Any]:
+    """Liste les modèles WhatsApp du compte (nom + code langue + statut) pour
+    diagnostiquer les erreurs de type « template does not exist in <lang> »."""
+    token, phone_id = _env("META_WA_TOKEN"), _env("META_WA_PHONE_ID")
+    out: Dict[str, Any] = {"templates": []}
+    if not (token and phone_id):
+        out["error"] = "META_WA_TOKEN / META_WA_PHONE_ID absents"
+        return out
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            # 1) Trouver le compte WhatsApp Business (WABA) du numéro.
+            r1 = await client.get(
+                f"https://graph.facebook.com/v20.0/{phone_id}",
+                params={"fields": "whatsapp_business_account", "access_token": token},
+            )
+            waba = (r1.json().get("whatsapp_business_account") or {}).get("id")
+            out["waba_id"] = waba
+            if not waba:
+                out["error"] = f"WABA introuvable: {r1.text[:200]}"
+                return out
+            # 2) Lister ses modèles.
+            r2 = await client.get(
+                f"https://graph.facebook.com/v20.0/{waba}/message_templates",
+                params={"fields": "name,language,status,category", "limit": 100, "access_token": token},
+            )
+            data = r2.json().get("data", [])
+            out["templates"] = [
+                {"name": t.get("name"), "language": t.get("language"),
+                 "status": t.get("status"), "category": t.get("category")}
+                for t in data
+            ]
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = str(exc)[:300]
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Contenu des messages
 # --------------------------------------------------------------------------- #
