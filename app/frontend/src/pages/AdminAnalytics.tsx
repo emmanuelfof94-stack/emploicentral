@@ -11,9 +11,63 @@ import {
 } from 'recharts';
 import Navbar from '../components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { getAnalyticsStats, type AnalyticsStats } from '../api/analytics';
 import { Link } from 'react-router-dom';
-import { Eye, Users, CalendarDays, TrendingUp, Loader2 } from 'lucide-react';
+import { Eye, Users, CalendarDays, TrendingUp, Loader2, MessageCircle } from 'lucide-react';
+
+function WhatsappTestButton() {
+  const [loading, setLoading] = useState(false);
+  const runTest = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/notifications/admin/whatsapp-test', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success('WhatsApp envoyé ✅', {
+          description: `Message parti vers ${data.to}. Vérifie ton WhatsApp.`,
+        });
+      } else {
+        const detail = data.response || data.error || 'Erreur inconnue';
+        toast.error('Échec WhatsApp', {
+          description: String(detail).slice(0, 300),
+          duration: 12000,
+        });
+        // eslint-disable-next-line no-console
+        console.log('Diagnostic WhatsApp:', data);
+      }
+    } catch (e) {
+      toast.error('Erreur réseau', { description: String(e).slice(0, 200) });
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Card className="border-emerald-200/70 bg-emerald-50/40 shadow-sm">
+      <CardContent className="py-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Diagnostic WhatsApp</p>
+            <p className="text-xs text-slate-500">
+              Envoie le message d'alerte de test sur ton propre numéro (profil admin).
+            </p>
+          </div>
+        </div>
+        <Button onClick={runTest} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
+          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
+          Tester WhatsApp
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 const RANGES = [
   { label: '7 j', days: 7 },
@@ -99,6 +153,10 @@ export default function AdminAnalytics() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mb-6">
+          <WhatsappTestButton />
         </div>
 
         {isLoading ? (
