@@ -324,34 +324,38 @@ async def send_whatsapp_debug(to_phone: str, params: Optional[List[str]] = None)
 async def list_whatsapp_templates() -> Dict[str, Any]:
     """Liste les modèles WhatsApp du compte (nom + code langue + statut) pour
     diagnostiquer les erreurs de type « template does not exist in <lang> »."""
-    token, phone_id = _env("META_WA_TOKEN"), _env("META_WA_PHONE_ID")
+    token = _env("META_WA_TOKEN")
     out: Dict[str, Any] = {"templates": []}
-    if not (token and phone_id):
-        out["error"] = "META_WA_TOKEN / META_WA_PHONE_ID absents"
+    if not token:
+        out["error"] = "META_WA_TOKEN absent"
         return out
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            # 1) Trouver le compte WhatsApp Business (WABA) du numéro.
-            r1 = await client.get(
-                f"https://graph.facebook.com/v20.0/{phone_id}",
-                params={"fields": "whatsapp_business_account", "access_token": token},
+            # 1) Retrouver le(s) compte(s) WhatsApp (WABA) via les droits du token.
+            waba_ids = set()
+            rd = await client.get(
+                "https://graph.facebook.com/v20.0/debug_token",
+                params={"input_token": token, "access_token": token},
             )
-            waba = (r1.json().get("whatsapp_business_account") or {}).get("id")
-            out["waba_id"] = waba
-            if not waba:
-                out["error"] = f"WABA introuvable: {r1.text[:200]}"
+            for gs in (rd.json().get("data", {}).get("granular_scopes") or []):
+                if "whatsapp_business" in (gs.get("scope") or ""):
+                    for tid in (gs.get("target_ids") or []):
+                        waba_ids.add(tid)
+            out["waba_ids"] = list(waba_ids)
+            if not waba_ids:
+                out["error"] = f"aucun compte WhatsApp dans le token: {rd.text[:200]}"
                 return out
-            # 2) Lister ses modèles.
-            r2 = await client.get(
-                f"https://graph.facebook.com/v20.0/{waba}/message_templates",
-                params={"fields": "name,language,status,category", "limit": 100, "access_token": token},
-            )
-            data = r2.json().get("data", [])
-            out["templates"] = [
-                {"name": t.get("name"), "language": t.get("language"),
-                 "status": t.get("status"), "category": t.get("category")}
-                for t in data
-            ]
+            # 2) Lister les modèles de chaque WABA (nom + code langue exact).
+            for waba in waba_ids:
+                r2 = await client.get(
+                    f"https://graph.facebook.com/v20.0/{waba}/message_templates",
+                    params={"fields": "name,language,status,category", "limit": 100, "access_token": token},
+                )
+                for t in r2.json().get("data", []):
+                    out["templates"].append({
+                        "name": t.get("name"), "language": t.get("language"),
+                        "status": t.get("status"), "category": t.get("category"),
+                    })
     except Exception as exc:  # noqa: BLE001
         out["error"] = str(exc)[:300]
     return out
