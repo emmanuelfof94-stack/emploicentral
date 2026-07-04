@@ -279,6 +279,48 @@ async def send_whatsapp(to_phone: str, body: str, params: Optional[List[str]] = 
     return False
 
 
+async def send_whatsapp_debug(to_phone: str, params: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Envoi de diagnostic (admin) : effectue l'envoi et renvoie le DÉTAIL de la
+    réponse (statut HTTP + corps Meta), pour tester la config sans deviner."""
+    phone = _normalize_phone(to_phone)
+    out: Dict[str, Any] = {"to": phone, "provider": None, "ok": False}
+    if not phone:
+        out["error"] = "numéro vide ou invalide"
+        return out
+    if not whatsapp_available():
+        out["error"] = "aucun fournisseur WhatsApp configuré (META_WA_TOKEN / META_WA_PHONE_ID absents)"
+        return out
+    if twilio_available():
+        out["provider"] = "twilio"
+        out["ok"] = await _send_whatsapp_twilio(phone, "Test EmploiCentral")
+        return out
+    out["provider"] = "meta"
+    template = _env("META_WA_TEMPLATE")
+    token, phone_id = _env("META_WA_TOKEN"), _env("META_WA_PHONE_ID")
+    out["template"] = template or "(texte libre)"
+    url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
+    if template:
+        payload = {
+            "messaging_product": "whatsapp", "to": phone.lstrip("+"), "type": "template",
+            "template": {
+                "name": template, "language": {"code": _env("META_WA_TEMPLATE_LANG") or "fr"},
+                "components": [{"type": "body", "parameters": [{"type": "text", "text": str(p)} for p in params]}] if params else [],
+            },
+        }
+    else:
+        payload = {"messaging_product": "whatsapp", "to": phone.lstrip("+"), "type": "text",
+                   "text": {"body": "Test EmploiCentral"}}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(url, json=payload, headers={"Authorization": f"Bearer {token}"})
+        out["status"] = r.status_code
+        out["response"] = r.text[:600]
+        out["ok"] = r.status_code < 400
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = str(exc)[:300]
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Contenu des messages
 # --------------------------------------------------------------------------- #

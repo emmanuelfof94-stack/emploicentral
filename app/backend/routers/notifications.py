@@ -1,5 +1,6 @@
 """In-app notifications API (liste + marquage lu)."""
 import logging
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends
@@ -8,9 +9,11 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from dependencies.auth import get_current_user
+from dependencies.auth import get_admin_user, get_current_user
 from models.notifications import Notification
+from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
+from services.notifications import send_whatsapp_debug
 
 logger = logging.getLogger(__name__)
 
@@ -73,3 +76,22 @@ async def mark_read(
     await db.execute(stmt)
     await db.commit()
     return {"ok": True}
+
+
+@router.post("/admin/whatsapp-test")
+async def whatsapp_test(
+    admin: UserResponse = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Diagnostic admin : envoie le template WhatsApp sur le numéro du profil admin
+    et renvoie le détail de la réponse Meta (statut + corps)."""
+    prof = (await db.execute(
+        select(User_profiles).where(User_profiles.user_id == str(admin.id))
+    )).scalars().first()
+    phone = ((prof.phone or "").strip() if prof else "")
+    if not phone:
+        return {"ok": False, "error": "Aucun numéro de téléphone dans le profil admin."}
+    first = (prof.full_name or "").strip().split(" ")[0] if prof and prof.full_name else "Test"
+    link = (os.environ.get("FRONTEND_URL") or "https://emploicentral.onrender.com").rstrip("/") + "/jobs"
+    result = await send_whatsapp_debug(phone, params=[first or "Test", "1", link])
+    return result
