@@ -13,7 +13,7 @@ from dependencies.auth import get_admin_user, get_current_user
 from models.notifications import Notification
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
-from services.notifications import send_whatsapp_debug
+from services.notifications import list_whatsapp_templates, send_whatsapp_debug
 
 logger = logging.getLogger(__name__)
 
@@ -94,4 +94,15 @@ async def whatsapp_test(
     first = (prof.full_name or "").strip().split(" ")[0] if prof and prof.full_name else "Test"
     link = (os.environ.get("FRONTEND_URL") or "https://emploicentral.onrender.com").rstrip("/") + "/jobs"
     result = await send_whatsapp_debug(phone, params=[first or "Test", "1", link])
+    # En cas d'échec, on liste les modèles réels pour un diagnostic immédiat.
+    if not result.get("ok"):
+        tpl = await list_whatsapp_templates()
+        result["available_templates"] = tpl.get("templates")
+        approved = [t for t in (tpl.get("templates") or []) if t.get("status") == "APPROVED"]
+        if approved:
+            result["hint"] = "Modèles approuvés : " + " | ".join(
+                f"{t['name']} (langue={t['language']})" for t in approved
+            )
+        elif tpl.get("error"):
+            result["hint"] = "Liste modèles: " + str(tpl["error"])
     return result
