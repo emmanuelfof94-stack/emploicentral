@@ -32,10 +32,11 @@ function WhatsappTestButton() {
           description: `Message parti vers ${data.to}. Vérifie ton WhatsApp.`,
         });
       } else {
-        const detail = data.hint || data.response || data.error || 'Erreur inconnue';
+        const sendErr = data.response || data.error || 'Erreur inconnue';
+        const detail = data.hint ? `${sendErr} — ${data.hint}` : sendErr;
         toast.error('Échec WhatsApp', {
-          description: String(detail).slice(0, 400),
-          duration: 15000,
+          description: String(detail).slice(0, 500),
+          duration: 20000,
         });
         // eslint-disable-next-line no-console
         console.log('Diagnostic WhatsApp:', data);
