@@ -329,21 +329,36 @@ async def list_whatsapp_templates() -> Dict[str, Any]:
     if not token:
         out["error"] = "META_WA_TOKEN absent"
         return out
+    app_secret = _env("META_APP_SECRET")
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            # 1) Retrouver le(s) compte(s) WhatsApp (WABA) via les droits du token.
             waba_ids = set()
+
+            def _collect(scopes):
+                for gs in (scopes or []):
+                    if "whatsapp_business" in (gs.get("scope") or ""):
+                        for tid in (gs.get("target_ids") or []):
+                            waba_ids.add(tid)
+
+            # 1a) Auto-débogage (souvent sans granular_scopes pour un System User).
             rd = await client.get(
                 "https://graph.facebook.com/v20.0/debug_token",
                 params={"input_token": token, "access_token": token},
             )
-            for gs in (rd.json().get("data", {}).get("granular_scopes") or []):
-                if "whatsapp_business" in (gs.get("scope") or ""):
-                    for tid in (gs.get("target_ids") or []):
-                        waba_ids.add(tid)
+            dj = rd.json().get("data", {})
+            app_id = dj.get("app_id")
+            _collect(dj.get("granular_scopes"))
+            # 1b) Débogage avec le token applicatif (app_id|app_secret) -> granular_scopes complets.
+            if not waba_ids and app_id and app_secret:
+                r2 = await client.get(
+                    "https://graph.facebook.com/v20.0/debug_token",
+                    params={"input_token": token, "access_token": f"{app_id}|{app_secret}"},
+                )
+                _collect(r2.json().get("data", {}).get("granular_scopes"))
             out["waba_ids"] = list(waba_ids)
             if not waba_ids:
-                out["error"] = f"aucun compte WhatsApp dans le token: {rd.text[:200]}"
+                hint = "" if app_secret else " — ajoute la variable META_APP_SECRET sur Render (clé secrète de l'app Meta) pour activer ce diagnostic."
+                out["error"] = f"compte WhatsApp introuvable via le token{hint}"
                 return out
             # 2) Lister les modèles de chaque WABA (nom + code langue exact).
             for waba in waba_ids:
