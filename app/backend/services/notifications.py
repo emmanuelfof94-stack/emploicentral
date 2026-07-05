@@ -168,6 +168,27 @@ async def send_email(to_addr: str, subject: str, html: str) -> bool:
         return False
 
 
+async def send_email_debug(to_addr: str) -> Dict[str, Any]:
+    """Diagnostic admin : tente un envoi email et renvoie le détail de l'erreur
+    SMTP le cas échéant (au lieu de l'avaler silencieusement)."""
+    out: Dict[str, Any] = {"to": to_addr, "ok": False}
+    if not email_available():
+        out["error"] = "SMTP non configuré (SMTP_HOST / SMTP_USER / SMTP_PASSWORD absents)"
+        return out
+    if not to_addr:
+        out["error"] = "email du profil admin vide"
+        return out
+    try:
+        await asyncio.to_thread(
+            _send_email_sync, to_addr, "Test EmploiCentral",
+            "<p>Ceci est un email de test d'EmploiCentral. Si tu le reçois, le SMTP fonctionne ✅</p>",
+        )
+        out["ok"] = True
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = str(exc)[:400]
+    return out
+
+
 def _normalize_phone(phone: str) -> str:
     """Met le numéro au format international E.164 (ex. +2250749109013).
 

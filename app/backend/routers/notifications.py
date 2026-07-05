@@ -13,7 +13,12 @@ from dependencies.auth import get_admin_user, get_current_user
 from models.notifications import Notification
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
-from services.notifications import dispatch_new_offer_alerts, list_whatsapp_templates, send_whatsapp_debug
+from services.notifications import (
+    dispatch_new_offer_alerts,
+    list_whatsapp_templates,
+    send_email_debug,
+    send_whatsapp_debug,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +111,20 @@ async def whatsapp_test(
         elif tpl.get("error"):
             result["hint"] = "Liste modèles: " + str(tpl["error"])
     return result
+
+
+@router.post("/admin/email-test")
+async def email_test(
+    admin: UserResponse = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Diagnostic admin : envoie un email de test au profil admin et renvoie
+    le détail (succès ou erreur SMTP)."""
+    prof = (await db.execute(
+        select(User_profiles).where(User_profiles.user_id == str(admin.id))
+    )).scalars().first()
+    email = ((prof.email or "").strip() if prof else "") or (admin.email or "")
+    return await send_email_debug(email)
 
 
 @router.post("/admin/run-dispatch")

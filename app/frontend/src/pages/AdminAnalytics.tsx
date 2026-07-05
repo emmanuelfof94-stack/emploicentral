@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { getAnalyticsStats, type AnalyticsStats } from '../api/analytics';
 import { Link } from 'react-router-dom';
-import { Eye, Users, CalendarDays, TrendingUp, Loader2, MessageCircle, Bell } from 'lucide-react';
+import { Eye, Users, CalendarDays, TrendingUp, Loader2, MessageCircle, Bell, Mail } from 'lucide-react';
 
 function WhatsappTestButton() {
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,31 @@ function WhatsappTestButton() {
       toast.error('Erreur réseau', { description: String(e).slice(0, 200) });
     } finally {
       setLoading(false);
+    }
+  };
+  const [emailing, setEmailing] = useState(false);
+  const runEmailTest = async () => {
+    setEmailing(true);
+    try {
+      const res = await fetch('/api/v1/notifications/admin/email-test', {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success('Email envoyé ✅', {
+          description: `Test parti vers ${data.to}. Vérifie ta boîte (+ Spam / Promotions).`,
+        });
+      } else {
+        toast.error('Échec Email', {
+          description: String(data.error || 'Erreur inconnue').slice(0, 400),
+          duration: 20000,
+        });
+      }
+    } catch (e) {
+      toast.error('Erreur réseau', { description: String(e).slice(0, 200) });
+    } finally {
+      setEmailing(false);
     }
   };
   const runDispatch = async () => {
@@ -85,6 +110,10 @@ function WhatsappTestButton() {
           <Button onClick={runTest} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
             Tester WhatsApp
+          </Button>
+          <Button onClick={runEmailTest} disabled={emailing} variant="outline" className="border-blue-300 text-blue-700">
+            {emailing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+            Tester Email
           </Button>
           <Button onClick={runDispatch} disabled={dispatching} variant="outline" className="border-emerald-300 text-emerald-700">
             {dispatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Bell className="w-4 h-4 mr-2" />}
