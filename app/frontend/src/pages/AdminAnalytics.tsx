@@ -15,16 +15,18 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { getAnalyticsStats, type AnalyticsStats } from '../api/analytics';
 import { Link } from 'react-router-dom';
-import { Eye, Users, CalendarDays, TrendingUp, Loader2, MessageCircle } from 'lucide-react';
+import { Eye, Users, CalendarDays, TrendingUp, Loader2, MessageCircle, Bell } from 'lucide-react';
 
 function WhatsappTestButton() {
   const [loading, setLoading] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+  const authHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}` };
   const runTest = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/v1/notifications/admin/whatsapp-test', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: authHeaders,
       });
       const data = await res.json();
       if (data.ok) {
@@ -47,6 +49,24 @@ function WhatsappTestButton() {
       setLoading(false);
     }
   };
+  const runDispatch = async () => {
+    setDispatching(true);
+    try {
+      const res = await fetch('/api/v1/notifications/admin/run-dispatch', {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      toast.success('Dispatch relancé ✅', {
+        description: `${data.created ?? 0} notification(s) créée(s). Les candidats éligibles reçoivent in-app + email + WhatsApp.`,
+        duration: 12000,
+      });
+    } catch (e) {
+      toast.error('Erreur réseau', { description: String(e).slice(0, 200) });
+    } finally {
+      setDispatching(false);
+    }
+  };
   return (
     <Card className="border-emerald-200/70 bg-emerald-50/40 shadow-sm">
       <CardContent className="py-4 flex items-center justify-between flex-wrap gap-3">
@@ -55,16 +75,22 @@ function WhatsappTestButton() {
             <MessageCircle className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">Diagnostic WhatsApp</p>
+            <p className="text-sm font-semibold text-slate-900">Notifications — outils</p>
             <p className="text-xs text-slate-500">
-              Envoie le message d'alerte de test sur ton propre numéro (profil admin).
+              Teste l'envoi WhatsApp, ou relance le dispatch d'alertes des nouvelles offres.
             </p>
           </div>
         </div>
-        <Button onClick={runTest} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
-          Tester WhatsApp
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button onClick={runTest} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
+            Tester WhatsApp
+          </Button>
+          <Button onClick={runDispatch} disabled={dispatching} variant="outline" className="border-emerald-300 text-emerald-700">
+            {dispatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Bell className="w-4 h-4 mr-2" />}
+            Relancer les alertes
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

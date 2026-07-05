@@ -13,7 +13,7 @@ from dependencies.auth import get_admin_user, get_current_user
 from models.notifications import Notification
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
-from services.notifications import list_whatsapp_templates, send_whatsapp_debug
+from services.notifications import dispatch_new_offer_alerts, list_whatsapp_templates, send_whatsapp_debug
 
 logger = logging.getLogger(__name__)
 
@@ -106,3 +106,13 @@ async def whatsapp_test(
         elif tpl.get("error"):
             result["hint"] = "Liste modèles: " + str(tpl["error"])
     return result
+
+
+@router.post("/admin/run-dispatch")
+async def run_dispatch(
+    admin: UserResponse = Depends(get_admin_user),
+):
+    """Déclenche manuellement le dispatch d'alertes (in-app + email + WhatsApp)
+    pour tous les candidats éligibles. Utile pour tester le flux automatique."""
+    created = await dispatch_new_offer_alerts()
+    return {"ok": True, "created": created}
