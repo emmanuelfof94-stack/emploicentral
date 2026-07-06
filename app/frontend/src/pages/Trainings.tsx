@@ -4,6 +4,7 @@ import Markdown from 'markdown-to-jsx';
 import Navbar from '../components/Navbar';
 import PartnerCard from '../components/PartnerCard';
 import CourseCard from '../components/CourseCard';
+import CertificationSpotlight from '../components/CertificationSpotlight';
 import {
   useTrainingThemes,
   useMyTrainings,
@@ -221,6 +222,9 @@ export default function Trainings() {
             personnalisé et notre équipe est notifiée de votre demande.
           </p>
         </div>
+
+        {/* Certifications payantes — mises en avant en tête d'onglet */}
+        <CertificationSpotlight />
 
         {/* Formulaire de demande */}
         <Card className="card-lift">
