@@ -815,6 +815,9 @@ export interface CourseAccess {
   payment_number: string;
   has_access: boolean;
   status: 'none' | 'pending' | 'paid' | 'rejected';
+  /** Vente suspendue : les ayants droit gardent l'accès, les nouvelles demandes sont refusées. */
+  sales_paused?: boolean;
+  paused_reason?: string | null;
 }
 
 export function useCourseAccess(slug: string, enabled = true) {
