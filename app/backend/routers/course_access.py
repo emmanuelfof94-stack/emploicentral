@@ -37,11 +37,18 @@ router = APIRouter(prefix="/api/v1/course-access", tags=["course-access"])
 PAYMENT_NUMBER = (os.environ.get("PAYMENT_MOBILE_MONEY") or "+225 07 49 10 90 13").strip()
 
 # Cours payants protégés : slug → métadonnées + fichier HTML servi.
+# `sales_paused` suspend UNIQUEMENT les nouvelles demandes d'achat : les ayants droit
+# (status=paid) conservent l'accès au contenu via /{slug}/content.
 PAID_COURSES = {
     "pmp": {
         "title": "Préparation à la certification PMP (simulation d'examen)",
         "file": "pmp-simulation.html",
         "price": "20 000 FCFA",
+        # Vente suspendue le temps de réécrire en questions originales les items
+        # de la banque repris/traduits d'un livre tiers et du glossaire PMBOK.
+        "sales_paused": True,
+        "paused_reason": "Cette préparation est en cours de refonte : la banque de questions est "
+                         "réécrite pour être 100 % originale. La vente rouvrira très bientôt.",
     },
 }
 
@@ -60,6 +67,8 @@ class AccessStatus(BaseModel):
     payment_number: str
     has_access: bool
     status: str  # none / pending / paid / rejected
+    sales_paused: bool = False
+    paused_reason: Optional[str] = None
 
 
 class AdminPurchase(BaseModel):
@@ -89,6 +98,15 @@ def _course_or_404(slug: str) -> dict:
     if not course:
         raise HTTPException(status_code=404, detail="Cours introuvable.")
     return course
+
+
+def _status(slug: str, course: dict, status: str) -> AccessStatus:
+    return AccessStatus(
+        slug=slug, title=course["title"], price=course["price"],
+        payment_number=PAYMENT_NUMBER, has_access=(status == "paid"), status=status,
+        sales_paused=bool(course.get("sales_paused")),
+        paused_reason=course.get("paused_reason") if course.get("sales_paused") else None,
+    )
 
 
 async def _notify_admins(db: AsyncSession, title: str, body: str, html: str) -> None:
@@ -126,11 +144,7 @@ async def access_status(
 ):
     course = _course_or_404(slug)
     p = await _latest_purchase(db, str(current_user.id), slug)
-    status = p.status if p else "none"
-    return AccessStatus(
-        slug=slug, title=course["title"], price=course["price"],
-        payment_number=PAYMENT_NUMBER, has_access=(status == "paid"), status=status,
-    )
+    return _status(slug, course, p.status if p else "none")
 
 
 @router.post("/{slug}/request", response_model=AccessStatus)
@@ -143,8 +157,13 @@ async def request_access(
     course = _course_or_404(slug)
     p = await _latest_purchase(db, str(current_user.id), slug)
     if p and p.status == "paid":
-        return AccessStatus(slug=slug, title=course["title"], price=course["price"],
-                            payment_number=PAYMENT_NUMBER, has_access=True, status="paid")
+        return _status(slug, course, "paid")
+    # Vente suspendue : on refuse toute NOUVELLE demande, sans toucher aux accès déjà
+    # accordés (retournés juste au-dessus) ni aux demandes en attente, que l'admin
+    # peut toujours valider depuis son espace.
+    if course.get("sales_paused"):
+        raise HTTPException(status_code=403, detail=course.get("paused_reason")
+                            or "La vente de ce cours est temporairement suspendue.")
     if p and p.status == "pending":
         p.payment_ref = (data.payment_ref or p.payment_ref)
     else:
@@ -166,8 +185,7 @@ async def request_access(
         "(Achats de cours).</p>"
     )
     await _notify_admins(db, title, body, html)
-    return AccessStatus(slug=slug, title=course["title"], price=course["price"],
-                        payment_number=PAYMENT_NUMBER, has_access=False, status="pending")
+    return _status(slug, course, "pending")
 
 
 @router.get("/{slug}/content")

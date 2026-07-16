@@ -15,6 +15,8 @@ type Cert = {
   tagline: string;
   price: string;
   highlights: { icon: React.ElementType; label: string }[];
+  /** Vente suspendue (cf. `sales_paused` dans course_access.py) → carte retirée de la vitrine. */
+  paused?: boolean;
 };
 
 const CERTIFICATIONS: Cert[] = [
@@ -29,11 +31,15 @@ const CERTIFICATIONS: Cert[] = [
       { icon: Clock, label: 'Examen chronométré' },
       { icon: InfinityIcon, label: 'Tentatives illimitées' },
     ],
+    // Refonte de la banque de questions en cours : ne pas promouvoir tant que la
+    // vente est suspendue côté backend.
+    paused: true,
   },
 ];
 
 export default function CertificationSpotlight() {
-  if (CERTIFICATIONS.length === 0) return null;
+  const visible = CERTIFICATIONS.filter((c) => !c.paused);
+  if (visible.length === 0) return null;
 
   return (
     <div className="space-y-4">
@@ -48,7 +54,7 @@ export default function CertificationSpotlight() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {CERTIFICATIONS.map((c) => (
+        {visible.map((c) => (
           <Link
             key={c.slug}
             to={`/cours/${c.slug}`}

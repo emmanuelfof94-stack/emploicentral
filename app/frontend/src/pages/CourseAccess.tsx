@@ -130,7 +130,30 @@ export default function CourseAccess() {
     );
   }
 
-  const purchaseCard = (
+  // Vente suspendue : on n'affiche ni prix ni instructions de paiement — seulement
+  // l'explication. Les ayants droit ne passent jamais ici (retour plein écran plus haut).
+  const pausedCard = (
+    <Card className="card-lift lg:sticky lg:top-6">
+      <CardContent className="p-5 space-y-4">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+          <Clock className="h-3.5 w-3.5" /> Bientôt disponible
+        </span>
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-amber-800">
+          <p className="font-medium">Vente temporairement suspendue</p>
+          <p className="text-sm mt-1">
+            {access?.paused_reason ||
+              "Cette préparation est en cours de refonte. La vente rouvrira très bientôt."}
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Si tu as déjà acheté ce cours, ton accès reste actif : reconnecte-toi avec le compte
+          utilisé lors de l'achat.
+        </p>
+      </CardContent>
+    </Card>
+  );
+
+  const purchaseCard = access?.sales_paused ? pausedCard : (
     <Card className="card-lift lg:sticky lg:top-6">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-baseline justify-between gap-2">
