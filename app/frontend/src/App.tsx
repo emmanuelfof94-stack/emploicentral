@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -10,29 +11,33 @@ import AnalyticsTracker from './components/AnalyticsTracker';
 import RouteBackground from './components/RouteBackground';
 import InstallPrompt from './components/InstallPrompt';
 import WhatsappFab from './components/WhatsappFab';
-import Index from './pages/Index';
-import Login from './pages/Login';
-import ResetPassword from './pages/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import Jobs from './pages/Jobs';
-import Applications from './pages/Applications';
-import Profile from './pages/Profile';
-import ChangePassword from './pages/ChangePassword';
-import AdminAnalytics from './pages/AdminAnalytics';
-import AdminTrainingPartners from './pages/AdminTrainingPartners';
-import AdminTrainingCourses from './pages/AdminTrainingCourses';
-import AdminUsers from './pages/AdminUsers';
-import AdminModeration from './pages/AdminModeration';
-import Recruiter from './pages/Recruiter';
-import RecruiterSignup from './pages/RecruiterSignup';
 import ProtectedRecruiterRoute from './components/ProtectedRecruiterRoute';
-import Alerts from './pages/Alerts';
-import Trainings from './pages/Trainings';
-import CourseAccess from './pages/CourseAccess';
-import AdminCoursePurchases from './pages/AdminCoursePurchases';
-import MarketTrends from './pages/MarketTrends';
-import AuthCallback from './pages/AuthCallback';
-import AuthError from './pages/AuthError';
+
+// Découpage par route (code splitting) : chaque page devient un chunk chargé à
+// la demande. Le premier écran (accueil / login) ne télécharge plus tout le
+// reste — notamment recharts, qui n'est utilisé que par AdminAnalytics.
+const Index = lazy(() => import('./pages/Index'));
+const Login = lazy(() => import('./pages/Login'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const Applications = lazy(() => import('./pages/Applications'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ChangePassword = lazy(() => import('./pages/ChangePassword'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const AdminTrainingPartners = lazy(() => import('./pages/AdminTrainingPartners'));
+const AdminTrainingCourses = lazy(() => import('./pages/AdminTrainingCourses'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminModeration = lazy(() => import('./pages/AdminModeration'));
+const Recruiter = lazy(() => import('./pages/Recruiter'));
+const RecruiterSignup = lazy(() => import('./pages/RecruiterSignup'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const Trainings = lazy(() => import('./pages/Trainings'));
+const CourseAccess = lazy(() => import('./pages/CourseAccess'));
+const AdminCoursePurchases = lazy(() => import('./pages/AdminCoursePurchases'));
+const MarketTrends = lazy(() => import('./pages/MarketTrends'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const AuthError = lazy(() => import('./pages/AuthError'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +51,14 @@ const queryClient = new QueryClient({
   },
 });
 
+const PageFallback = () => (
+  <div className="flex min-h-[60vh] items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary" />
+  </div>
+);
+
 const AppRoutes = () => (
+  <Suspense fallback={<PageFallback />}>
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<Login />} />
@@ -71,6 +83,7 @@ const AppRoutes = () => (
     <Route path="/auth/callback" element={<AuthCallback />} />
     <Route path="/auth/error" element={<AuthError />} />
   </Routes>
+  </Suspense>
 );
 
 const App = () => (

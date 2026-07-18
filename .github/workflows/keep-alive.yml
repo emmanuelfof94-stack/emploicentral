@@ -1,24 +1,42 @@
 name: keep-alive
 
 # Garde l'app Render "réveillée" pendant les heures actives (évite les cold starts
-# de l'offre gratuite). Ping /health toutes les 10 min entre 06:00 et 22:59 UTC
-# (≈ heures actives en Afrique de l'Ouest). La nuit, l'app peut dormir → on reste
-# largement sous le quota gratuit Render (~750 h/mois).
+# de l'offre gratuite, qui endort le conteneur après 15 min sans trafic).
+#
+# Piège : sur les dépôts gratuits, GitHub étrangle fortement les crons rapprochés
+# — un « */10 » ne tourne en réalité qu'environ une fois par heure. Résultat :
+# entre deux pings l'app se rendort et le keep-alive ne sert à rien.
+#
+# Solution : le dépôt est PUBLIC → minutes Actions illimitées. Chaque exécution
+# reste donc active ~2h50 et ping /health toutes les 5 min (bien sous le seuil de
+# 15 min de Render). On déclenche toutes les 2 h : les exécutions se chevauchent,
+# ce qui absorbe le jitter d'ordonnancement de GitHub et garantit une couverture
+# continue de 06:00 à ~23:00 UTC (≈ heures actives en Afrique de l'Ouest). La nuit
+# l'app peut dormir → on reste largement sous le quota Render (~750 h/mois).
 on:
   schedule:
-    - cron: '*/10 6-22 * * *'
+    - cron: '0 6,8,10,12,14,16,18,20,22 * * *'
   workflow_dispatch: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      URL: https://emploicentral.onrender.com/health
+      INTERVAL_SECONDS: 300   # ping toutes les 5 min (< seuil de veille de 15 min)
+      MAX_MINUTES: 170        # durée de vie de l'exécution (chevauche la suivante à +120 min)
     steps:
-      - name: Ping health endpoint
+      - name: Ping health endpoint en boucle
         run: |
-          for i in 1 2 3; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" -m 60 https://emploicentral.onrender.com/health || echo 000)
-            echo "tentative $i -> HTTP $code"
-            if [ "$code" = "200" ]; then exit 0; fi
-            sleep 20
+          deadline=$(( $(date +%s) + MAX_MINUTES * 60 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 90 "$URL" || echo 000)
+            echo "$(date -u +%H:%M:%S) -> HTTP $code"
+            [ "$(date +%s)" -ge "$deadline" ] && break
+            sleep "$INTERVAL_SECONDS"
           done
-          echo "health non OK après 3 tentatives"
