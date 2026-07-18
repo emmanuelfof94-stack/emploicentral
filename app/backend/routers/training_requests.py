@@ -23,7 +23,7 @@ from models.notifications import Notification
 from models.training_requests import Training_requests
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
-from services import training_generator
+from services import training_generator, training_quota
 from services.notifications import send_email
 
 logger = logging.getLogger(__name__)
@@ -132,6 +132,12 @@ async def generate_training(
     if not theme:
         raise HTTPException(status_code=400, detail="La thématique est requise.")
 
+    # Quota : chaque génération consomme 1 accès. On bloque AVANT la génération
+    # (coûteuse) si le candidat a épuisé ses accès gratuits sans avoir l'illimité.
+    if not await training_quota.has_remaining(db, str(current_user.id)):
+        await training_quota.notify_quota_blocked(db, str(current_user.id))
+        raise training_quota.quota_exhausted_error()
+
     # Contexte profil (facultatif) pour personnaliser le parcours.
     profile = (await db.execute(
         select(User_profiles).where(User_profiles.user_id == str(current_user.id))
@@ -156,6 +162,10 @@ async def generate_training(
         status="generated",
     )
     db.add(req)
+    await db.flush()  # obtient req.id pour référencer l'accès consommé
+    # Consomme l'accès dans la même transaction que la création du parcours :
+    # une génération échouée ne débite jamais le quota.
+    await training_quota.consume(db, str(current_user.id), "generate", str(req.id), commit=False)
     await db.commit()
     await db.refresh(req)
 

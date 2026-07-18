@@ -383,6 +383,9 @@ export interface TrainingCourse {
   url?: string;
   is_active?: boolean;
   created_at?: string;
+  /** Gratuites : l'URL n'est révélée qu'après déblocage (consomme 1 accès).
+   *  undefined pour les formations payantes (hors quota). */
+  is_unlocked?: boolean;
 }
 
 export interface CourseFilters {
@@ -887,6 +890,70 @@ export function useAdminPurchaseActions() {
     await invalidate('admin_purchases');
   };
   return { validate, reject };
+}
+
+// ---- Quota d'accès aux formations (5 gratuits à vie, puis accès illimité payant) ----
+export interface TrainingQuota {
+  limit: number;
+  used: number;
+  remaining: number | null; // null = illimité
+  unlimited: boolean;
+  purchase_status: 'none' | 'pending' | 'paid' | 'rejected';
+  price: string;
+  payment_number: string;
+}
+
+/** true si l'erreur est un 402 « quota épuisé » (déclenche l'affichage du paywall). */
+export function isQuotaError(e: unknown): boolean {
+  const anyE = e as { response?: { status?: number } };
+  return anyE?.response?.status === 402;
+}
+
+export function useTrainingQuota(enabled = true) {
+  return useQuery({
+    queryKey: ['training_quota'],
+    enabled,
+    staleTime: 30_000,
+    // Se rafraîchit régulièrement pour refléter une validation admin (achat illimité).
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<TrainingQuota> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/training-access/quota', method: 'GET' });
+      return (res?.data ?? res) as TrainingQuota;
+    },
+  });
+}
+
+export interface UnlockResult {
+  course_id: number;
+  url?: string;
+  unlocked: boolean;
+}
+
+export function useTrainingAccessActions() {
+  const invalidate = useInvalidate();
+  /** Débloque une formation gratuite (peut lever un 402 → paywall). */
+  const unlockCourse = async (courseId: number): Promise<UnlockResult> => {
+    const res = await client.apiCall.invoke({
+      url: `/api/v1/training-courses/${courseId}/unlock`,
+      method: 'POST',
+      data: {},
+    });
+    await invalidate('training_courses');
+    await invalidate('training_course_suggestions');
+    await invalidate('training_quota');
+    return (res?.data ?? res) as UnlockResult;
+  };
+  /** Déclare le paiement de l'accès illimité (validation admin ensuite). */
+  const purchaseUnlimited = async (paymentRef: string): Promise<TrainingQuota> => {
+    const res = await client.apiCall.invoke({
+      url: '/api/v1/training-access/purchase-request',
+      method: 'POST',
+      data: { payment_ref: paymentRef },
+    });
+    await invalidate('training_quota');
+    return (res?.data ?? res) as TrainingQuota;
+  };
+  return { unlockCourse, purchaseUnlimited };
 }
 
 export function useInvalidate() {

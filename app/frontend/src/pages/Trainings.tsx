@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Markdown from 'markdown-to-jsx';
 import Navbar from '../components/Navbar';
 import PartnerCard from '../components/PartnerCard';
 import CourseCard from '../components/CourseCard';
 import CertificationSpotlight from '../components/CertificationSpotlight';
+import TrainingPaywall from '../components/TrainingPaywall';
 import {
   useTrainingThemes,
   useMyTrainings,
@@ -14,7 +15,11 @@ import {
   useCourses,
   useCourseDomains,
   useCourseSuggestions,
+  useTrainingQuota,
+  useTrainingAccessActions,
+  isQuotaError,
   type TrainingRequest,
+  type TrainingCourse,
 } from '../hooks/useApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,12 +45,42 @@ import {
   Handshake,
   Library,
   BookOpen,
+  Infinity as InfinityIcon,
+  Ticket,
 } from 'lucide-react';
+
+// Ouvre la modale paywall depuis n'importe quelle sous-section (évite le prop drilling).
+const PaywallContext = createContext<() => void>(() => {});
+
+/** Débloque une formation gratuite ; ouvre le paywall si le quota est épuisé (402). */
+function useCourseUnlock() {
+  const openPaywall = useContext(PaywallContext);
+  const { unlockCourse } = useTrainingAccessActions();
+  const [unlockingId, setUnlockingId] = useState<number | null>(null);
+
+  const unlock = async (course: TrainingCourse) => {
+    setUnlockingId(course.id);
+    try {
+      const res = await unlockCourse(course.id);
+      if (res?.url) {
+        window.open(res.url, '_blank', 'noopener,noreferrer');
+        toast.success('Formation débloquée ! Le lien s’ouvre dans un nouvel onglet.');
+      }
+    } catch (e) {
+      if (isQuotaError(e)) openPaywall();
+      else toast.error('Le déblocage a échoué. Réessayez.');
+    } finally {
+      setUnlockingId(null);
+    }
+  };
+  return { unlock, unlockingId };
+}
 
 /** Suggestions (formations réelles + organismes) rattachées à un parcours. */
 function SuggestionsForTheme({ theme }: { theme: string }) {
   const { data: courses } = useCourseSuggestions(theme);
   const { data: partners } = usePartnerSuggestions(theme);
+  const { unlock, unlockingId } = useCourseUnlock();
   const hasCourses = courses && courses.length > 0;
   const hasPartners = partners && partners.length > 0;
   if (!hasCourses && !hasPartners) return null;
@@ -60,7 +95,13 @@ function SuggestionsForTheme({ theme }: { theme: string }) {
           </h4>
           <div className="grid gap-3 sm:grid-cols-2">
             {courses!.map((c) => (
-              <CourseCard key={c.id} course={c} compact />
+              <CourseCard
+                key={c.id}
+                course={c}
+                compact
+                onUnlock={unlock}
+                unlocking={unlockingId === c.id}
+              />
             ))}
           </div>
         </div>
@@ -86,6 +127,7 @@ function SuggestionsForTheme({ theme }: { theme: string }) {
 function CatalogSection() {
   const [domain, setDomain] = useState<string>('');
   const [onlyFree, setOnlyFree] = useState(false);
+  const { unlock, unlockingId } = useCourseUnlock();
   const { data: domains } = useCourseDomains();
   const { data: courses, isLoading } = useCourses({
     domain: domain || undefined,
@@ -153,7 +195,12 @@ function CatalogSection() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {courses.map((c) => (
-            <CourseCard key={c.id} course={c} />
+            <CourseCard
+              key={c.id}
+              course={c}
+              onUnlock={unlock}
+              unlocking={unlockingId === c.id}
+            />
           ))}
         </div>
       )}
@@ -166,6 +213,7 @@ export default function Trainings() {
   const { data: themesData } = useTrainingThemes();
   const { data: trainings, isLoading } = useMyTrainings();
   const { generate, remove } = useTrainingActions();
+  const { data: quota } = useTrainingQuota();
 
   // Préremplissage depuis la boucle emploi→compétences (lien /trainings?theme=…).
   const [searchParams] = useSearchParams();
@@ -174,6 +222,7 @@ export default function Trainings() {
   const [objective, setObjective] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const suggested = themesData?.themes ?? [];
   const levels = themesData?.levels ?? ['Débutant', 'Intermédiaire', 'Avancé'];
@@ -193,7 +242,11 @@ export default function Trainings() {
       setObjective('');
       if (created?.id) setExpanded(created.id);
     } catch (e) {
-      toast.error("La génération a échoué. Réessayez dans un instant.");
+      if (isQuotaError(e)) {
+        setPaywallOpen(true);
+      } else {
+        toast.error('La génération a échoué. Réessayez dans un instant.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -209,18 +262,51 @@ export default function Trainings() {
   };
 
   return (
+    <PaywallContext.Provider value={() => setPaywallOpen(true)}>
     <div className="min-h-screen app-surface">
       <Navbar />
+      <TrainingPaywall open={paywallOpen} onOpenChange={setPaywallOpen} />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-terracotta-500" />
-            Formations
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-terracotta-500" />
+              Formations
+            </h1>
+            {quota && (
+              quota.unlimited ? (
+                <Badge className="bg-primary/10 text-primary border-primary/20 gap-1.5">
+                  <InfinityIcon className="h-3.5 w-3.5" /> Accès illimité
+                </Badge>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPaywallOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                  title="Chaque parcours IA ou déblocage de formation consomme 1 accès"
+                >
+                  <Ticket className="h-3.5 w-3.5 text-primary" />
+                  {quota.remaining ?? 0} / {quota.limit} accès gratuits restants
+                </button>
+              )
+            )}
+          </div>
           <p className="text-muted-foreground mt-1">
             Demandez une formation sur une thématique précise : nous générons un parcours
             personnalisé et notre équipe est notifiée de votre demande.
           </p>
+          {quota && !quota.unlimited && quota.remaining === 0 && (
+            <p className="text-sm text-amber-700 mt-2">
+              Vous avez utilisé vos {quota.limit} accès gratuits.{' '}
+              <button
+                type="button"
+                onClick={() => setPaywallOpen(true)}
+                className="underline font-medium hover:text-amber-900"
+              >
+                Débloquer l'accès illimité ({quota.price})
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Certifications payantes — mises en avant en tête d'onglet */}
@@ -396,5 +482,6 @@ export default function Trainings() {
         )}
       </main>
     </div>
+    </PaywallContext.Provider>
   );
 }

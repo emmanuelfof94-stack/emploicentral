@@ -27,6 +27,7 @@ from models.auth import User
 from models.course_purchases import Course_purchases
 from models.notifications import Notification
 from schemas.auth import UserResponse
+from services import training_quota
 from services.notifications import send_email
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,14 @@ def _course_or_404(slug: str) -> dict:
     if not course:
         raise HTTPException(status_code=404, detail="Cours introuvable.")
     return course
+
+
+def _title_for(slug: str) -> str:
+    """Titre lisible d'un achat, y compris les « produits » hors cours protégés
+    (ex. l'accès illimité aux formations)."""
+    return (PAID_COURSES.get(slug, {}).get("title")
+            or training_quota.PRODUCT_TITLES.get(slug)
+            or slug)
 
 
 def _status(slug: str, course: dict, status: str) -> AccessStatus:
@@ -223,7 +232,7 @@ async def admin_list_purchases(
         out.append(AdminPurchase(
             id=r.id, user_id=r.user_id, user_email=emails.get(r.user_id),
             course_slug=r.course_slug,
-            course_title=(PAID_COURSES.get(r.course_slug, {}).get("title") or r.course_slug),
+            course_title=_title_for(r.course_slug),
             status=r.status, payment_ref=r.payment_ref, amount=r.amount, created_at=r.created_at,
         ))
     return out
@@ -240,7 +249,7 @@ async def admin_validate(
         raise HTTPException(status_code=404, detail="Demande introuvable.")
     p.status = "paid"
     uid = p.user_id
-    title = PAID_COURSES.get(p.course_slug, {}).get("title", p.course_slug)
+    title = _title_for(p.course_slug)
     await db.commit()
     await _notify_user(db, uid, "✅ Accès débloqué", f"Votre paiement pour « {title} » est validé. Vous pouvez maintenant accéder au cours.")
     return {"success": True}
@@ -257,7 +266,7 @@ async def admin_reject(
         raise HTTPException(status_code=404, detail="Demande introuvable.")
     p.status = "rejected"
     uid = p.user_id
-    title = PAID_COURSES.get(p.course_slug, {}).get("title", p.course_slug)
+    title = _title_for(p.course_slug)
     await db.commit()
     await _notify_user(db, uid, "Paiement non confirmé", f"Votre paiement pour « {title} » n'a pas pu être confirmé. Vérifiez et soumettez à nouveau, ou contactez-nous.")
     return {"success": True}
