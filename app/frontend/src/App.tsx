@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import ChunkErrorBoundary from './components/ChunkErrorBoundary';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -58,6 +59,7 @@ const PageFallback = () => (
 );
 
 const AppRoutes = () => (
+  <ChunkErrorBoundary>
   <Suspense fallback={<PageFallback />}>
   <Routes>
     <Route path="/" element={<Index />} />
@@ -84,6 +86,7 @@ const AppRoutes = () => (
     <Route path="/auth/error" element={<AuthError />} />
   </Routes>
   </Suspense>
+  </ChunkErrorBoundary>
 );
 
 const App = () => (
