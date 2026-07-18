@@ -1,0 +1,87 @@
+-- Cours gratuits (vague 2) — élargissement du catalogue EmploiCentral hors tech pure :
+-- gestion & business, anglais & soft skills, logistique, RH, QHSE, cloud, bureautique.
+-- Chaque URL a été vérifiée par récupération de la page (titre confirmé) — aucune URL devinée.
+-- Idempotent : n'insère une ligne que si son URL n'existe pas déjà.
+-- À exécuter sur la base Neon de production.
+
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (CNAM)', 'La compta pour tous', 'Comprendre la comptabilité côté décision plutôt que technique : lire les comptes et piloter une organisation.', 'Gestion & business', 'Débutant', '~35 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/la-compta-pour-tous/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/la-compta-pour-tous/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (CNAM)', 'L''analyse financière pour tous', 'Lire un bilan et un compte de résultat, calculer les ratios clés et poser un diagnostic financier d''entreprise.', 'Gestion & business', 'Intermédiaire', '~35 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/lanalyse-financiere-pour-tous/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/lanalyse-financiere-pour-tous/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Initiez-vous à la gestion de projet', 'Structurer, planifier et piloter un projet : objectifs, outils pratiques, coordination d''équipe et évaluation.', 'Gestion & business', 'Débutant', '~4 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/8744811-initiez-vous-a-la-gestion-de-projet', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/8744811-initiez-vous-a-la-gestion-de-projet');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (CNFPT)', 'Créateur d''une micro-entreprise', 'Les conditions de création d''une micro-entreprise, les droits et obligations du micro-entrepreneur et les formalités.', 'Gestion & business', 'Débutant', '~3 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/createur-dune-micro-entreprise/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/createur-dune-micro-entreprise/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (Université de Montpellier)', 'Entrepreneuriat et Croissance Attitude', 'Faire grandir son entreprise : ambition de croissance, pilotage, management d''équipe, mentorat et international.', 'Gestion & business', 'Intermédiaire', '~18 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/entrepreneuriat-et-croissance-attitude/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/entrepreneuriat-et-croissance-attitude/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Initiez-vous aux techniques commerciales', 'Parcourir le cycle de vente complet : prospection, entretien découverte, SPIN selling, négociation et signature.', 'Gestion & business', 'Débutant', '~8 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/4750821-initiez-vous-aux-techniques-commerciales', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/4750821-initiez-vous-aux-techniques-commerciales');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Pilotez une prospection commerciale efficace', 'Bâtir son plan de prospection, sourcer ses futurs clients et qualifier ses prospects avec un fichier de suivi.', 'Gestion & business', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/6380896-pilotez-une-prospection-commerciale-efficace', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/6380896-pilotez-une-prospection-commerciale-efficace');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (Université Libre de Bruxelles)', 'L''anglais pour tous — Spice up Your English', 'Progresser en anglais général avec méthodes et astuces, jusqu''au niveau A2+/B1- du cadre européen.', 'Anglais & soft skills', 'Débutant', '~72 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/langlais-pour-tous-spice-up-your-english/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/langlais-pour-tous-spice-up-your-english/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (Université de Lorraine)', 'Conduite de réunion en anglais', 'Animer et participer à une réunion professionnelle en anglais : oral, vocabulaire et interactions de travail.', 'Anglais & soft skills', 'Intermédiaire', '~10 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/conduite-de-reunion-en-anglais/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/conduite-de-reunion-en-anglais/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Land a Job — décrocher un emploi dans le monde anglophone', 'Cours en anglais : rédiger une lettre de motivation ciblée et préparer son entretien en contexte anglophone.', 'Anglais & soft skills', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/2903306-preparer-son-entretien-de-recrutement-monde-anglophone', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/2903306-preparer-son-entretien-de-recrutement-monde-anglophone');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Prenez la parole en public', 'Techniques de communication orale : storytelling, mind mapping et entraînement pour maîtriser sa prestation.', 'Anglais & soft skills', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/4577696-prenez-la-parole-en-public', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/4577696-prenez-la-parole-en-public');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Élaborez votre stratégie de recherche d''emploi', 'Rédiger un CV percutant, soigner sa présence LinkedIn et organiser sa recherche d''offres efficacement.', 'Anglais & soft skills', 'Débutant', '~8 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/5218221-elaborez-votre-strategie-de-recherche-d-emploi', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/5218221-elaborez-votre-strategie-de-recherche-d-emploi');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Apprenez à apprendre', 'Améliorer sa capacité d''apprentissage : plan personnalisé, mémorisation, apprentissage actif et auto-évaluation.', 'Anglais & soft skills', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/4312781-apprenez-a-apprendre', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/4312781-apprenez-a-apprendre');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Découvrez les processus au cœur de la logistique', 'Le rôle de l''entrepôt dans la supply chain : processus amont et aval, indicateurs et outils comme le WMS.', 'Logistique', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/7779336-decouvrez-les-processus-au-coeur-de-la-logistique', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/7779336-decouvrez-les-processus-au-coeur-de-la-logistique');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Maîtrisez les fondamentaux de la Supply Chain', 'Suivre la chaîne d''approvisionnement de A à Z : flux de matières, d''informations et d''argent jusqu''au client.', 'Logistique', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/7779391-maitrisez-les-fondamentaux-de-la-supply-chain', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/7779391-maitrisez-les-fondamentaux-de-la-supply-chain');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Découvrez les métiers des ressources humaines', 'Panorama des missions RH : recrutement, formation, gestion des carrières, paie et relations sociales.', 'Ressources humaines', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/8558161-decouvrez-les-metiers-des-ressources-humaines', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/8558161-decouvrez-les-metiers-des-ressources-humaines');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Recrutez par les compétences', 'Bâtir un processus de recrutement fondé sur les compétences pour évaluer les candidats objectivement.', 'Ressources humaines', 'Intermédiaire', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/8445681-recrutez-par-les-competences', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/8445681-recrutez-par-les-competences');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (CNFPT)', 'Les fondamentaux de la prévention des risques au travail', 'Enjeux et cadre juridique de la santé-sécurité au travail, acteurs de la prévention et évaluation des risques.', 'QHSE', 'Débutant', '~9 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/les-fondamentaux-de-la-prevention-des-risques-au-travail/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/les-fondamentaux-de-la-prevention-des-risques-au-travail/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'FUN-MOOC (CNAM)', 'Des risques psychosociaux vers la santé mentale en entreprise', 'Identifier causes et effets des risques psychosociaux, poser un diagnostic et bâtir un plan de prévention.', 'QHSE', 'Intermédiaire', '~15 h', NULL, true, 'En ligne', 'En ligne', 'https://www.fun-mooc.fr/en/cours/risques-psychosociaux/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://www.fun-mooc.fr/en/cours/risques-psychosociaux/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'Microsoft Learn', 'Maîtrise de l''IA', 'Parcours en 7 modules : bases de l''IA, IA générative, recherche et raisonnement, IA responsable et Copilot.', 'Data / IA', 'Débutant', 'Libre', NULL, true, 'En ligne', 'En ligne', 'https://learn.microsoft.com/fr-fr/training/paths/ai-fluency/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://learn.microsoft.com/fr-fr/training/paths/ai-fluency/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'Microsoft Learn', 'Concepts d''IA pour les développeurs et les professionnels de la tech', 'Terminologie et charges de travail IA : IA générative, agents, vision, speech, NLP et extraction d''informations.', 'Data / IA', 'Débutant', 'Libre', NULL, true, 'En ligne', 'En ligne', 'https://learn.microsoft.com/fr-fr/training/paths/ai-concepts/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://learn.microsoft.com/fr-fr/training/paths/ai-concepts/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'Microsoft Learn', 'Concepts du cloud (Azure Fundamentals)', 'Premiers pas dans le cloud : modèles de déploiement, responsabilité partagée, avantages et types de services.', 'Cloud', 'Débutant', 'Libre', NULL, true, 'En ligne', 'En ligne', 'https://learn.microsoft.com/fr-fr/training/paths/microsoft-azure-fundamentals-describe-cloud-concepts/', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://learn.microsoft.com/fr-fr/training/paths/microsoft-azure-fundamentals-describe-cloud-concepts/');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Découvrez l''univers de la cybersécurité', 'Comprendre le déroulé d''une cyberattaque via un cas fictif d''hôpital et découvrir les métiers de la cybersécurité.', 'Cybersécurité', 'Débutant', '~4 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/8028761-decouvrez-l-univers-de-la-cybersecurite', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/8028761-decouvrez-l-univers-de-la-cybersecurite');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Découvrez les bases de la sécurité numérique', 'Sécuriser son ordinateur et sa navigation, protéger sa vie privée en ligne et repérer les tentatives de fraude.', 'Cybersécurité', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/5870206-decouvrez-les-bases-de-la-securite-numerique', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/5870206-decouvrez-les-bases-de-la-securite-numerique');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Créez votre site web avec HTML5 et CSS3', 'S''initier à la programmation web avec HTML5 et CSS3 : structurer le contenu et créer une mise en forme dynamique.', 'Développement web', 'Débutant', '~15 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/1603881-creez-votre-site-web-avec-html5-et-css3', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/1603881-creez-votre-site-web-avec-html5-et-css3');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Maîtrisez les fondamentaux d''Excel', 'Prendre en main Excel : mise en forme des données, formules, tri et tableaux croisés dynamiques.', 'Bureautique', 'Débutant', '~6 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/7168336-maitrisez-les-fondamentaux-d-excel', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/7168336-maitrisez-les-fondamentaux-d-excel');
+INSERT INTO training_courses (partner_name, title, description, domain, level, duration, price, is_free, format, location, url, is_active)
+SELECT 'OpenClassrooms', 'Initiez-vous au traitement de texte', 'Maîtriser Word, Writer ou Google Docs : fonctionnalités de base et mise en page professionnelle d''un document.', 'Bureautique', 'Débutant', '~12 h', NULL, true, 'En ligne', 'En ligne', 'https://openclassrooms.com/fr/courses/5870066-initiez-vous-au-traitement-de-texte', true
+WHERE NOT EXISTS (SELECT 1 FROM training_courses WHERE url = 'https://openclassrooms.com/fr/courses/5870066-initiez-vous-au-traitement-de-texte');
