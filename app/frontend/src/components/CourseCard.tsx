@@ -7,18 +7,27 @@ import {
   Building2,
   Monitor,
   Tag,
+  Lock,
+  Loader2,
 } from 'lucide-react';
 import type { TrainingCourse } from '../hooks/useApi';
 
-/** Carte d'une formation du catalogue. `compact` allège le rendu (suggestions). */
+/** Carte d'une formation du catalogue. `compact` allège le rendu (suggestions).
+ *  `onUnlock` : formation gratuite verrouillée → bouton « Débloquer » (consomme 1 accès). */
 export default function CourseCard({
   course,
   compact = false,
+  onUnlock,
+  unlocking = false,
 }: {
   course: TrainingCourse;
   compact?: boolean;
+  onUnlock?: (course: TrainingCourse) => void;
+  unlocking?: boolean;
 }) {
   const free = course.is_free === true;
+  // Gratuite verrouillée : pas d'URL révélée et non débloquée → on propose le déblocage.
+  const locked = free && course.is_unlocked === false && !course.url;
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-sm transition-shadow flex flex-col">
       <div className="flex items-start justify-between gap-2">
@@ -78,7 +87,7 @@ export default function CourseCard({
         ) : (
           <span />
         )}
-        {course.url && (
+        {course.url ? (
           <a
             href={course.url}
             target="_blank"
@@ -87,7 +96,24 @@ export default function CourseCard({
           >
             S'inscrire <ExternalLink className="w-3.5 h-3.5" />
           </a>
-        )}
+        ) : locked && onUnlock ? (
+          <button
+            type="button"
+            onClick={() => onUnlock(course)}
+            disabled={unlocking}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 shrink-0 disabled:opacity-60"
+          >
+            {unlocking ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Déblocage…
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5" /> Débloquer <span className="text-xs text-slate-400">(1 accès)</span>
+              </>
+            )}
+          </button>
+        ) : null}
       </div>
     </div>
   );

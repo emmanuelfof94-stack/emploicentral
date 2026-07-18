@@ -21,10 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from dependencies.auth import get_admin_user, get_current_user
+from models.training_access import Training_access_events
 from models.training_courses import Training_courses
 from models.training_partners import Training_partners
 from schemas.auth import UserResponse
+from services import training_quota
 from services.training_partners import relevance_score
+from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +51,18 @@ class CourseResponse(BaseModel):
     url: Optional[str] = None
     is_active: Optional[bool] = None
     created_at: Optional[datetime] = None
+    # Gratuites : l'URL n'est révélée qu'après déblocage (consomme 1 accès).
+    # None pour les formations payantes (non concernées par le quota).
+    is_unlocked: Optional[bool] = None
 
     class Config:
         from_attributes = True
+
+
+class UnlockResponse(BaseModel):
+    course_id: int
+    url: Optional[str] = None
+    unlocked: bool
 
 
 class CourseCreate(BaseModel):
@@ -103,6 +115,37 @@ def _sort_catalog(rows: List[Training_courses]) -> List[Training_courses]:
     )
 
 
+async def _unlocked_ids(db: AsyncSession, user_id: str) -> set[str]:
+    """Ids (en str) des formations gratuites déjà débloquées par le candidat."""
+    rows = (await db.execute(
+        select(Training_access_events.ref).where(
+            Training_access_events.user_id == user_id,
+            Training_access_events.kind == "catalog",
+        )
+    )).scalars().all()
+    return {r for r in rows if r}
+
+
+async def _present(db: AsyncSession, user_id: str, rows: List[Training_courses]) -> List[CourseResponse]:
+    """Sérialise les formations en masquant l'URL des gratuites non débloquées.
+
+    - Gratuite non débloquée : `url=None`, `is_unlocked=False` (le front propose « Débloquer »).
+    - Gratuite débloquée      : `url` révélée, `is_unlocked=True`.
+    - Payante                 : `url` visible, `is_unlocked=None` (hors quota).
+    """
+    unlocked = await _unlocked_ids(db, user_id) if any(c.is_free for c in rows) else set()
+    out: List[CourseResponse] = []
+    for c in rows:
+        item = CourseResponse.model_validate(c)
+        if c.is_free:
+            is_unlocked = str(c.id) in unlocked
+            item.is_unlocked = is_unlocked
+            if not is_unlocked:
+                item.url = None
+        out.append(item)
+    return out
+
+
 async def _resolve_partner_name(db: AsyncSession, partner_id: Optional[int], fallback: Optional[str]) -> Optional[str]:
     """Renseigne `partner_name` depuis le partenaire si un id est fourni."""
     if partner_id:
@@ -122,7 +165,7 @@ async def list_courses(
     is_free: Optional[bool] = Query(None),
     partner_id: Optional[int] = Query(None),
     q: Optional[str] = Query(None, description="Recherche plein texte (titre/description/domaine)"),
-    _user: UserResponse = Depends(get_current_user),
+    user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Catalogue des formations actives (gratuites d'abord)."""
@@ -143,7 +186,7 @@ async def list_courses(
             or needle in (c.description or "").lower()
             or needle in (c.domain or "").lower()
         ]
-    return _sort_catalog(rows)
+    return await _present(db, str(user.id), _sort_catalog(rows))
 
 
 @router.get("/domains", response_model=List[str])
@@ -163,7 +206,7 @@ async def list_course_domains(
 async def suggest_courses(
     theme: str = Query(..., description="Thématique à faire correspondre"),
     limit: int = Query(4, ge=1, le=20),
-    _user: UserResponse = Depends(get_current_user),
+    user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Formations réelles recommandées pour une thématique (pertinentes, gratuites d'abord)."""
@@ -178,7 +221,40 @@ async def suggest_courses(
     ranked = sorted(rows, key=key)
     # Ne garder que des formations avec une réelle correspondance.
     relevant = [c for c in ranked if relevance_score(c.domain or "", c.title or "", theme) > 0]
-    return relevant[:limit]
+    return await _present(db, str(user.id), relevant[:limit])
+
+
+@router.post("/{course_id}/unlock", response_model=UnlockResponse)
+async def unlock_course(
+    course_id: int,
+    user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Débloque une formation gratuite (consomme 1 accès) et révèle son lien.
+
+    Idempotent : rouvrir une formation déjà débloquée ne reconsomme pas d'accès.
+    Quota épuisé sans accès illimité → 402 (le front affiche le paywall).
+    """
+    course = (await db.execute(
+        select(Training_courses).where(
+            and_(Training_courses.id == course_id, Training_courses.is_active == True)  # noqa: E712
+        )
+    )).scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    if not course.is_free:
+        # Les formations payantes ne sont pas concernées par le quota : lien direct.
+        return UnlockResponse(course_id=course_id, url=course.url, unlocked=True)
+
+    uid = str(user.id)
+    already = str(course_id) in await _unlocked_ids(db, uid)
+    if not already and not await training_quota.has_remaining(db, uid):
+        await training_quota.notify_quota_blocked(db, uid)
+        raise training_quota.quota_exhausted_error()
+
+    # consume() est idempotent sur (kind, ref) : pas de double débit.
+    await training_quota.consume(db, uid, "catalog", str(course_id))
+    return UnlockResponse(course_id=course_id, url=course.url, unlocked=True)
 
 
 # ---------- Endpoints admin ----------
