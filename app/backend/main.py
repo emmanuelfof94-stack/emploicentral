@@ -89,11 +89,18 @@ async def lifespan(app: FastAPI):
     # MODULE_SHUTDOWN_END
 
 
+# SECURITE: la doc interactive (/docs, /redoc, /openapi.json) expose toute la surface
+# de l'API. On ne l'active qu'en mode debug ; en production elle est désactivée.
+_docs_enabled = bool(getattr(settings, "debug", False))
+
 app = FastAPI(
     title="FastAPI Modular Template",
     description="A best-practice FastAPI template with modular architecture",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
 )
 
 
@@ -111,8 +118,13 @@ def _build_cors_origin_regex() -> str:
     frontend = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
     if frontend:
         patterns.append(_re.escape(frontend))
-    # Tout sous-domaine *.fly.dev de cette app (preview / déploiements).
-    patterns.append(r"https://[a-z0-9-]+\.fly\.dev")
+    # Origines supplémentaires explicites (previews/déploiements), séparées par des virgules
+    # via CORS_EXTRA_ORIGINS. On n'autorise plus un wildcard *.fly.dev (trop large avec
+    # allow_credentials=True : n'importe quelle app fly.dev pourrait appeler l'API).
+    for extra in (os.environ.get("CORS_EXTRA_ORIGINS") or "").split(","):
+        extra = extra.strip().rstrip("/")
+        if extra:
+            patterns.append(_re.escape(extra))
     return r"^(" + "|".join(patterns) + r")$"
 
 
@@ -124,6 +136,23 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+
+# SECURITE: en-têtes de sécurité HTTP ajoutés à toutes les réponses.
+# (CSP volontairement omise ici : une politique stricte casse souvent une SPA ;
+#  à ajouter de façon dédiée après test du frontend.)
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    # HSTS : force HTTPS pendant 2 ans (le TLS est terminé par Cloudflare/Render).
+    response.headers.setdefault(
+        "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+    )
+    return response
 # MODULE_MIDDLEWARE_END
 
 

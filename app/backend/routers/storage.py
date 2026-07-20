@@ -174,14 +174,19 @@ async def download_file(request: FileUpDownRequest, _current_user: UserResponse 
 
 
 # --- Local blob endpoints (used only by the local-disk backend) ---
-# These mimic cloud "presigned URLs": the web-sdk PUTs/GETs the file directly with
-# no Authorization header, so they are intentionally unauthenticated. Safety relies
-# on path sanitization (no traversal) and a size cap.
+# These mimic cloud "presigned URLs": the web-sdk PUTs/GETs the file directly with no
+# Authorization header. L'accès est autorisé par une SIGNATURE à durée limitée (HMAC)
+# présente dans l'URL, émise uniquement par /upload-url et /download-url (authentifiés).
+# La sécurité repose donc sur : signature valide + non expirée + assainissement du chemin.
 
 
 @router.put("/blob/{bucket}/{object_key:path}")
 async def put_blob(bucket: str, object_key: str, request: Request):
-    """Receive a raw file body and store it on local disk."""
+    """Receive a raw file body and store it on local disk (URL signée requise)."""
+    if not local_storage.verify_blob_signature(
+        "PUT", bucket, object_key, request.query_params.get("exp"), request.query_params.get("sig")
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lien d'envoi invalide ou expiré")
     body = await request.body()
     if len(body) > MAX_BLOB_BYTES:
         raise HTTPException(
@@ -196,8 +201,12 @@ async def put_blob(bucket: str, object_key: str, request: Request):
 
 
 @router.get("/blob/{bucket}/{object_key:path}")
-async def get_blob(bucket: str, object_key: str):
-    """Serve a stored file from local disk."""
+async def get_blob(bucket: str, object_key: str, request: Request):
+    """Serve a stored file from local disk (URL signée requise)."""
+    if not local_storage.verify_blob_signature(
+        "GET", bucket, object_key, request.query_params.get("exp"), request.query_params.get("sig")
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lien de téléchargement invalide ou expiré")
     try:
         path = local_storage.read_blob_path(bucket, object_key)
     except ValueError as e:

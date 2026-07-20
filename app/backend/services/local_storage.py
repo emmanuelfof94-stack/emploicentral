@@ -7,6 +7,8 @@ local blob endpoints (PUT/GET /api/v1/storage/blob/...), which the web-sdk calls
 directly the same way it would call a presigned cloud URL.
 """
 
+import hashlib
+import hmac
 import logging
 import os
 import re
@@ -36,6 +38,43 @@ logger = logging.getLogger(__name__)
 # volume persistant. Par défaut : app/backend/storage (dev local).
 STORAGE_ROOT = Path(os.environ.get("STORAGE_ROOT") or (Path(__file__).resolve().parent.parent / "storage"))
 BLOB_URL_PREFIX = "/api/v1/storage/blob"
+
+# Durée de validité d'une URL de blob signée (1 h). Suffisant : le frontend demande une
+# URL fraîche via /upload-url ou /download-url (endpoints authentifiés) juste avant usage.
+BLOB_URL_TTL_SECONDS = 3600
+
+
+def _signing_key() -> bytes:
+    """Clé HMAC pour signer les URLs de blob. Réutilise le secret JWT (déjà requis en prod)."""
+    key = os.environ.get("STORAGE_SIGNING_KEY") or os.environ.get("JWT_SECRET_KEY") or ""
+    return key.encode()
+
+
+def _sign_blob(method: str, bucket: str, key: str, exp: int) -> str:
+    """Calcule la signature HMAC-SHA256 liant méthode + bucket + clé + expiration."""
+    msg = f"{method.upper()}\n{bucket}\n{key}\n{exp}".encode()
+    return hmac.new(_signing_key(), msg, hashlib.sha256).hexdigest()
+
+
+def build_signed_blob_url(method: str, bucket: str, key: str, ttl: int = BLOB_URL_TTL_SECONDS) -> str:
+    """Construit une URL de blob signée et à durée limitée (bucket/clé déjà assainis)."""
+    exp = int((datetime.now(timezone.utc) + timedelta(seconds=ttl)).timestamp())
+    sig = _sign_blob(method, bucket, key, exp)
+    return f"{BLOB_URL_PREFIX}/{bucket}/{key}?exp={exp}&sig={sig}"
+
+
+def verify_blob_signature(method: str, bucket: str, key: str, exp: Optional[str], sig: Optional[str]) -> bool:
+    """Vérifie la signature et l'expiration d'une URL de blob (assainit bucket/clé comme à la génération)."""
+    if not exp or not sig or not _signing_key():
+        return False
+    try:
+        exp_int = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if exp_int < int(datetime.now(timezone.utc).timestamp()):
+        return False
+    expected = _sign_blob(method, sanitize_bucket(bucket), sanitize_key(key), exp_int)
+    return hmac.compare_digest(expected, sig)
 
 
 def sanitize_bucket(name: str) -> str:
@@ -137,14 +176,15 @@ class LocalStorageService:
         bucket = sanitize_bucket(request.bucket_name)
         key = sanitize_key(request.object_key)
         (STORAGE_ROOT / bucket).mkdir(parents=True, exist_ok=True)
-        url = f"{BLOB_URL_PREFIX}/{bucket}/{key}"
-        return FileUpDownResponse(upload_url=url, download_url=url, expires_at=_far_future())
+        upload_url = build_signed_blob_url("PUT", bucket, key)
+        download_url = build_signed_blob_url("GET", bucket, key)
+        return FileUpDownResponse(upload_url=upload_url, download_url=download_url, expires_at=_far_future())
 
     async def create_download_url(self, request: FileUpDownRequest) -> FileUpDownResponse:
         bucket = sanitize_bucket(request.bucket_name)
         key = sanitize_key(request.object_key)
-        url = f"{BLOB_URL_PREFIX}/{bucket}/{key}"
-        return FileUpDownResponse(upload_url=url, download_url=url, expires_at=_far_future())
+        download_url = build_signed_blob_url("GET", bucket, key)
+        return FileUpDownResponse(upload_url=download_url, download_url=download_url, expires_at=_far_future())
 
 
 def save_blob(bucket: str, object_key: str, data: bytes) -> int:

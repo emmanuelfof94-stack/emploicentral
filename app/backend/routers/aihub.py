@@ -9,7 +9,8 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from dependencies.auth import get_current_user
 from schemas.aihub import (
     AnalyzePdfRequest,
     AnalyzePdfResponse,
@@ -111,7 +112,8 @@ def extract_error_message(error: Any) -> str:
     return error_str
 
 
-router = APIRouter(prefix="/api/v1/aihub", tags=["aihub"])
+# SECURITE: authentification requise sur TOUTES les routes IA (évite l'abus/coût des crédits IA)
+router = APIRouter(prefix="/api/v1/aihub", tags=["aihub"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/gentxt")

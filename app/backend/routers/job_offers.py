@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from services.job_offers import Job_offersService
+from dependencies.auth import get_admin_user
+from schemas.auth import UserResponse
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -206,9 +208,10 @@ async def get_job_offers(
 @router.post("", response_model=Job_offersResponse, status_code=201)
 async def create_job_offers(
     data: Job_offersData,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new job_offers"""
+    """Create a new job_offers (admin uniquement)"""
     logger.debug(f"Creating new job_offers with data: {data}")
     
     service = Job_offersService(db)
@@ -230,9 +233,10 @@ async def create_job_offers(
 @router.post("/batch", response_model=List[Job_offersResponse], status_code=201)
 async def create_job_offerss_batch(
     request: Job_offersBatchCreateRequest,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create multiple job_offerss in a single request"""
+    """Create multiple job_offerss in a single request (admin uniquement)"""
     logger.debug(f"Batch creating {len(request.items)} job_offerss")
     
     service = Job_offersService(db)
@@ -255,9 +259,10 @@ async def create_job_offerss_batch(
 @router.put("/batch", response_model=List[Job_offersResponse])
 async def update_job_offerss_batch(
     request: Job_offersBatchUpdateRequest,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update multiple job_offerss in a single request"""
+    """Update multiple job_offerss in a single request (admin uniquement)"""
     logger.debug(f"Batch updating {len(request.items)} job_offerss")
     
     service = Job_offersService(db)
@@ -283,9 +288,10 @@ async def update_job_offerss_batch(
 async def update_job_offers(
     id: int,
     data: Job_offersUpdateData,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update an existing job_offers"""
+    """Update an existing job_offers (admin uniquement)"""
     logger.debug(f"Updating job_offers {id} with data: {data}")
 
     service = Job_offersService(db)
@@ -312,9 +318,10 @@ async def update_job_offers(
 @router.delete("/batch")
 async def delete_job_offerss_batch(
     request: Job_offersBatchDeleteRequest,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete multiple job_offerss by their IDs"""
+    """Delete multiple job_offerss by their IDs (admin uniquement)"""
     logger.debug(f"Batch deleting {len(request.ids)} job_offerss")
     
     service = Job_offersService(db)
@@ -337,9 +344,10 @@ async def delete_job_offerss_batch(
 @router.delete("/{id}")
 async def delete_job_offers(
     id: int,
+    current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a single job_offers by ID"""
+    """Delete a single job_offers by ID (admin uniquement)"""
     logger.debug(f"Deleting job_offers with id: {id}")
     
     service = Job_offersService(db)
