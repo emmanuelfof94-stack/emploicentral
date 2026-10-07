@@ -74,6 +74,7 @@ export default function CourseAccess() {
       const token = localStorage.getItem('token');
       fetch(`/api/v1/course-access/${slug}/content`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store', // toujours la dernière version du cours
       })
         .then((r) => {
           if (!r.ok) throw new Error(String(r.status));

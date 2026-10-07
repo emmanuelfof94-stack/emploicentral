@@ -210,7 +210,10 @@ async def course_content(
     path = _PROTECTED_DIR / course["file"]
     if not path.exists():
         raise HTTPException(status_code=404, detail="Contenu du cours introuvable.")
-    return FileResponse(str(path), media_type="text/html")
+    # Pas de cache navigateur : contenu protégé, et chaque mise à jour du cours
+    # doit être visible immédiatement (sinon cache heuristique sur Last-Modified).
+    return FileResponse(str(path), media_type="text/html",
+                        headers={"Cache-Control": "no-store"})
 
 
 # ---------- Endpoints admin ----------
