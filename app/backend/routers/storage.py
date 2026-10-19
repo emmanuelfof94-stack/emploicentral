@@ -1,10 +1,12 @@
 import logging
 
 from core.config import settings
+from core.database import get_db
 from dependencies.auth import get_admin_user, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from schemas.auth import UserResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.storage import (
     BucketListResponse,
     BucketRequest,
@@ -19,7 +21,7 @@ from schemas.storage import (
     RenameRequest,
     RenameResponse,
 )
-from services import local_storage
+from services import local_storage, storage_ownership
 from services.local_storage import LocalStorageService
 from services.storage import StorageService
 
@@ -55,7 +57,7 @@ async def create_bucket(request: BucketRequest, _current_user: UserResponse = De
 
 
 @router.get("/list-buckets", response_model=BucketListResponse)
-async def list_buckets(_current_user: UserResponse = Depends(get_current_user)):
+async def list_buckets(_current_user: UserResponse = Depends(get_admin_user)):
     """
     List buckets of the user
     """
@@ -71,9 +73,10 @@ async def list_buckets(_current_user: UserResponse = Depends(get_current_user)):
 
 
 @router.get("/list-objects", response_model=ObjectListResponse)
-async def list_objects(request: OSSBaseModel = Depends(), _current_user: UserResponse = Depends(get_current_user)):
+async def list_objects(request: OSSBaseModel = Depends(), _current_user: UserResponse = Depends(get_admin_user)):
     """
-    List objects under the bucket
+    List objects under the bucket (admin uniquement : la liste révèle les clés de
+    tous les fichiers, donc de tous les CV).
     """
     try:
         service = get_storage_service()
@@ -87,10 +90,15 @@ async def list_objects(request: OSSBaseModel = Depends(), _current_user: UserRes
 
 
 @router.get("/get-object-info", response_model=ObjectInfo)
-async def get_object_info(request: ObjectRequest = Depends(), _current_user: UserResponse = Depends(get_current_user)):
+async def get_object_info(
+    request: ObjectRequest = Depends(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Get object metadata from the bucket
     """
+    await storage_ownership.require_owner(db, current_user, request.bucket_name, request.object_key)
     try:
         service = get_storage_service()
         return await service.get_object_info(request)
@@ -103,13 +111,25 @@ async def get_object_info(request: ObjectRequest = Depends(), _current_user: Use
 
 
 @router.post("/rename-object", response_model=RenameResponse)
-async def rename_object(request: RenameRequest, _current_user: UserResponse = Depends(get_current_user)):
+async def rename_object(
+    request: RenameRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Rename object inside the bucket
     """
+    await storage_ownership.require_owner(db, current_user, request.bucket_name, request.source_key)
+    target_owner = await storage_ownership.owner_of(db, request.bucket_name, request.target_key)
+    if target_owner is not None and target_owner != str(current_user.id) and not storage_ownership.is_admin(current_user):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ce nom de fichier est déjà utilisé.")
     try:
         service = get_storage_service()
-        return await service.rename_object(request)
+        result = await service.rename_object(request)
+        if target_owner is not None:
+            await storage_ownership.release(db, request.bucket_name, request.target_key)
+        await storage_ownership.transfer_key(db, request.bucket_name, request.source_key, request.target_key)
+        return result
     except ValueError as e:
         logger.error(f"Invalid rename object: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -119,13 +139,20 @@ async def rename_object(request: RenameRequest, _current_user: UserResponse = De
 
 
 @router.delete("/delete-object", response_model=DeleteResponse)
-async def delete_object(request: ObjectRequest, _current_user: UserResponse = Depends(get_current_user)):
+async def delete_object(
+    request: ObjectRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Delete object inside the bucket
     """
+    await storage_ownership.require_owner(db, current_user, request.bucket_name, request.object_key)
     try:
         service = get_storage_service()
-        return await service.delete_object(request)
+        result = await service.delete_object(request)
+        await storage_ownership.release(db, request.bucket_name, request.object_key)
+        return result
     except ValueError as e:
         logger.error(f"Invalid delete object: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -135,7 +162,11 @@ async def delete_object(request: ObjectRequest, _current_user: UserResponse = De
 
 
 @router.post("/upload-url", response_model=FileUpDownResponse)
-async def upload_file(request: FileUpDownRequest, _current_user: UserResponse = Depends(get_current_user)):
+async def upload_file(
+    request: FileUpDownRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Get a presigned URL for uploading a file to StorageService.
 
@@ -145,7 +176,11 @@ async def upload_file(request: FileUpDownRequest, _current_user: UserResponse = 
     3. Returns presigned URL and access_url from OSS service
     4. Client uploads file directly to ObjectStorage using the presigned URL
     5. File is accessible at the returned access_url
+
+    La clé est réservée à l'appelant AVANT l'émission de l'URL : impossible d'écraser
+    le fichier d'un autre utilisateur.
     """
+    await storage_ownership.claim(db, current_user, request.bucket_name, request.object_key)
     try:
         service = get_storage_service()
         return await service.create_upload_url(request)
@@ -158,10 +193,15 @@ async def upload_file(request: FileUpDownRequest, _current_user: UserResponse = 
 
 
 @router.post("/download-url", response_model=FileUpDownResponse)
-async def download_file(request: FileUpDownRequest, _current_user: UserResponse = Depends(get_current_user)):
+async def download_file(
+    request: FileUpDownRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Get a presigned URL for downloading a file to StorageService.
+    Get a presigned URL for downloading a file to StorageService (propriétaire ou admin).
     """
+    await storage_ownership.require_owner(db, current_user, request.bucket_name, request.object_key)
     try:
         service = get_storage_service()
         return await service.create_download_url(request)

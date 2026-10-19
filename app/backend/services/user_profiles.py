@@ -5,8 +5,11 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.user_profiles import User_profiles
+from services.storage_ownership import user_owns_cv_key
 
 logger = logging.getLogger(__name__)
+
+CV_KEY_ERROR = "Fichier CV invalide : déposez votre CV depuis la page Profil."
 
 
 # ------------------ Service Layer ------------------
@@ -21,6 +24,11 @@ class User_profilesService:
         try:
             if user_id:
                 data['user_id'] = user_id
+            # Le profil ne peut pointer que vers un CV déposé par son propriétaire
+            # (sinon la génération de CV lirait le fichier d'un autre candidat).
+            key = (data.get('cv_object_key') or '').strip()
+            if key and not await user_owns_cv_key(self.db, str(data.get('user_id') or ''), key):
+                raise ValueError(CV_KEY_ERROR)
             obj = User_profiles(**data)
             self.db.add(obj)
             await self.db.commit()
@@ -110,6 +118,9 @@ class User_profilesService:
             if not obj:
                 logger.warning(f"User_profiles {obj_id} not found for update")
                 return None
+            new_key = (update_data.get('cv_object_key') or '').strip()
+            if new_key and new_key != (obj.cv_object_key or '') and not await user_owns_cv_key(self.db, obj.user_id, new_key):
+                raise ValueError(CV_KEY_ERROR)
             for key, value in update_data.items():
                 if hasattr(obj, key) and key != 'user_id':
                     setattr(obj, key, value)

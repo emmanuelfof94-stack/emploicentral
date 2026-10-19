@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from models.job_postings import Job_postings
 from services.job_offers import Job_offersService
 from dependencies.auth import get_admin_user
 from schemas.auth import UserResponse
@@ -106,6 +107,31 @@ class Job_offersBatchDeleteRequest(BaseModel):
     ids: List[int]
 
 
+# ---------- Offres recruteur non validées ----------
+async def _unapproved_ids(db: AsyncSession) -> set:
+    """Offres publiées par un recruteur et pas (encore) approuvées par la modération.
+
+    Ces routes de lecture sont publiques (le fil candidat s'en sert) : sans ce filtre,
+    une offre en attente ou refusée était lisible par n'importe qui, sans connexion
+    (faille moyenne du test d'intrusion 2026-10-19). Le recruteur voit ses offres via
+    /api/v1/recruiter/jobs, l'admin via la modération.
+    """
+    from sqlalchemy import select
+
+    return set((await db.execute(
+        select(Job_postings.job_id).where(Job_postings.status != "approved")
+    )).scalars().all())
+
+
+async def _without_unapproved(db: AsyncSession, result: dict) -> dict:
+    hidden = await _unapproved_ids(db)
+    if hidden:
+        items = [i for i in result["items"] if i.id not in hidden]
+        result["total"] = max(0, result["total"] - (len(result["items"]) - len(items)))
+        result["items"] = items
+    return result
+
+
 # ---------- Routes ----------
 @router.get("", response_model=Job_offersListResponse)
 async def query_job_offerss(
@@ -136,7 +162,7 @@ async def query_job_offerss(
             sort=sort,
         )
         logger.debug(f"Found {result['total']} job_offerss")
-        return result
+        return await _without_unapproved(db, result)
     except HTTPException:
         raise
     except Exception as e:
@@ -173,7 +199,7 @@ async def query_job_offerss_all(
             sort=sort
         )
         logger.debug(f"Found {result['total']} job_offerss")
-        return result
+        return await _without_unapproved(db, result)
     except HTTPException:
         raise
     except Exception as e:
@@ -193,7 +219,7 @@ async def get_job_offers(
     service = Job_offersService(db)
     try:
         result = await service.get_by_id(id)
-        if not result:
+        if not result or id in await _unapproved_ids(db):
             logger.warning(f"Job_offers with id {id} not found")
             raise HTTPException(status_code=404, detail="Job_offers not found")
         
