@@ -38,6 +38,7 @@ PAYMENT_NUMBER = (os.environ.get("PAYMENT_MOBILE_MONEY") or "+225 07 49 10 90 13
 
 
 class QuotaResponse(BaseModel):
+    enabled: bool = True              # False = verrou levé, formations en accès libre
     limit: int
     used: int
     remaining: Optional[int] = None   # None = illimité
@@ -54,7 +55,7 @@ class PurchaseRequest(BaseModel):
 async def _quota_response(db: AsyncSession, user_id: str) -> QuotaResponse:
     q = await training_quota.get_quota(db, user_id)
     return QuotaResponse(
-        limit=q["limit"], used=q["used"], remaining=q["remaining"],
+        enabled=q["enabled"], limit=q["limit"], used=q["used"], remaining=q["remaining"],
         unlimited=q["unlimited"], purchase_status=q["purchase_status"],
         price=q["price"], payment_number=PAYMENT_NUMBER,
     )

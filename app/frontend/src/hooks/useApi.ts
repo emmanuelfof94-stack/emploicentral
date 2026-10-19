@@ -915,6 +915,7 @@ export function useAdminPurchaseActions() {
 
 // ---- Quota d'accès aux formations (5 gratuits à vie, puis accès illimité payant) ----
 export interface TrainingQuota {
+  enabled?: boolean; // false = verrou levé, formations en accès libre
   limit: number;
   used: number;
   remaining: number | null; // null = illimité

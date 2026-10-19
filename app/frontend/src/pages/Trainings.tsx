@@ -213,7 +213,9 @@ export default function Trainings() {
   const { data: themesData } = useTrainingThemes();
   const { data: trainings, isLoading } = useMyTrainings();
   const { generate, remove } = useTrainingActions();
-  const { data: quota } = useTrainingQuota();
+  const { data: quotaRaw } = useTrainingQuota();
+  // Verrou levé côté serveur (enabled=false) : aucun compteur ni incitation à l'achat.
+  const quota = quotaRaw?.enabled === false ? undefined : quotaRaw;
 
   // Préremplissage depuis la boucle emploi→compétences (lien /trainings?theme=…).
   const [searchParams] = useSearchParams();

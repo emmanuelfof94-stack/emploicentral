@@ -133,12 +133,14 @@ async def _present(db: AsyncSession, user_id: str, rows: List[Training_courses])
     - Gratuite débloquée      : `url` révélée, `is_unlocked=True`.
     - Payante                 : `url` visible, `is_unlocked=None` (hors quota).
     """
-    unlocked = await _unlocked_ids(db, user_id) if any(c.is_free for c in rows) else set()
+    # Verrou du quota levé : toutes les formations gratuites sont en accès libre.
+    gated = training_quota.quota_enabled()
+    unlocked = await _unlocked_ids(db, user_id) if gated and any(c.is_free for c in rows) else set()
     out: List[CourseResponse] = []
     for c in rows:
         item = CourseResponse.model_validate(c)
         if c.is_free:
-            is_unlocked = str(c.id) in unlocked
+            is_unlocked = (not gated) or str(c.id) in unlocked
             item.is_unlocked = is_unlocked
             if not is_unlocked:
                 item.url = None

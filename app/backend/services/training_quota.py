@@ -12,6 +12,7 @@ slug produit `formations-illimite`. Le compteur consommé = nombre de lignes dan
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional
 
 from fastapi import HTTPException
@@ -26,6 +27,14 @@ logger = logging.getLogger(__name__)
 
 # Quota gratuit à vie.
 FREE_ACCESS_LIMIT = 5
+
+
+def quota_enabled() -> bool:
+    """Verrou du quota. Levé par défaut (décision du 2026-10-19 : formations en
+    accès libre « pour le moment ») ; le remettre = `TRAINING_QUOTA_ENABLED=true`
+    sur Render, sans redéploiement de code. Verrou levé : aucun accès n'est
+    consommé ni journalisé, pour ne pas pénaliser les candidats à la réactivation."""
+    return (os.environ.get("TRAINING_QUOTA_ENABLED") or "false").strip().lower() in ("1", "true", "yes", "on")
 
 # Produit « accès illimité » (acheté via le flux Course_purchases existant).
 UNLIMITED_SLUG = "formations-illimite"
@@ -74,6 +83,7 @@ async def get_quota(db: AsyncSession, user_id: str) -> dict:
     used = await used_count(db, user_id)
     remaining = None if unlimited else max(0, FREE_ACCESS_LIMIT - used)
     return {
+        "enabled": quota_enabled(),
         "limit": FREE_ACCESS_LIMIT,
         "used": used,
         "remaining": remaining,
@@ -99,7 +109,7 @@ async def _already_consumed(db: AsyncSession, user_id: str, kind: str, ref: Opti
 
 async def has_remaining(db: AsyncSession, user_id: str) -> bool:
     """Reste-t-il au moins un accès (gratuit ou illimité) ?"""
-    if await has_unlimited(db, user_id):
+    if not quota_enabled() or await has_unlimited(db, user_id):
         return True
     return await used_count(db, user_id) < FREE_ACCESS_LIMIT
 
@@ -157,7 +167,7 @@ async def consume(
     Idempotent pour un même (kind, ref) : rebloquer une formation déjà débloquée
     ne reconsomme pas d'accès. Un accès illimité ne consomme jamais rien.
     """
-    if await _already_consumed(db, user_id, kind, ref):
+    if not quota_enabled() or await _already_consumed(db, user_id, kind, ref):
         return
     if not await has_remaining(db, user_id):
         raise quota_exhausted_error()
