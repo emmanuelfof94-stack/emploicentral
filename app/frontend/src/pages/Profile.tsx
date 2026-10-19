@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Upload, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { profileCompletion } from '../lib/profileCompletion';
 
 interface UserProfile {
   id?: number;
@@ -183,6 +184,9 @@ export default function Profile() {
     });
   };
 
+  // Calculé sur le profil ENREGISTRÉ (pas la saisie en cours) pour rester exact.
+  const completion = profileCompletion(fetchedProfile as UserProfile | undefined);
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen app-surface">
@@ -204,6 +208,38 @@ export default function Profile() {
             Téléchargez votre CV pour une analyse automatique, ou complétez vos informations.
           </p>
         </div>
+
+        {/* Complétude du profil : jauge + éléments manquants */}
+        {completion.percent < 100 && (
+          <Card className="mb-6 border-slate-200/70 shadow-sm">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-slate-900">Profil complété à {completion.percent}%</p>
+                <span className="text-xs text-slate-500">Un profil complet = de meilleurs matchs</span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden mb-4">
+                <div
+                  className="h-full rounded-full bg-warm-gradient transition-all duration-500"
+                  style={{ width: `${completion.percent}%` }}
+                />
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                {completion.items.map((item) => (
+                  <li key={item.key} className="flex items-start gap-2 text-sm">
+                    {item.done ? (
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-600 shrink-0" />
+                    ) : (
+                      <Circle className="w-4 h-4 mt-0.5 text-slate-300 shrink-0" />
+                    )}
+                    <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>
+                      {item.done ? item.label : item.hint}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Section téléchargement CV */}
         <Card className="mb-6 border-slate-200/70 shadow-sm">

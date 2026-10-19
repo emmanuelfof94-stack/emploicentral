@@ -400,3 +400,37 @@ async def admin_reject(
     posting.reject_reason = (data.reason or "").strip() or None
     await db.commit()
     return {"success": True}
+
+
+# ---------- Contact candidat (Postuler via WhatsApp) ----------
+class JobContact(BaseModel):
+    company_name: Optional[str] = None
+    whatsapp: Optional[str] = None     # chiffres internationaux sans '+' (format wa.me)
+
+
+@router.get("/contact/{job_id}", response_model=JobContact)
+async def job_contact(
+    job_id: int,
+    _user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Numéro WhatsApp du recruteur pour une offre APPROUVÉE (sinon vide).
+
+    Réutilise `recruiter_profiles.contact_phone` saisi à l'inscription : aucune
+    nouvelle colonne. Les offres agrégées n'ont pas de posting → réponse vide.
+    """
+    from services.notifications import _normalize_phone
+
+    posting = (await db.execute(
+        select(Job_postings).where(Job_postings.job_id == job_id, Job_postings.status == "approved")
+    )).scalars().first()
+    if not posting:
+        return JobContact()
+    prof = (await db.execute(
+        select(Recruiter_profiles).where(Recruiter_profiles.user_id == posting.posted_by)
+    )).scalars().first()
+    phone = _normalize_phone(prof.contact_phone or "") if prof else ""
+    return JobContact(
+        company_name=posting.company_name or (prof.company_name if prof else None),
+        whatsapp=phone.lstrip("+") or None,
+    )

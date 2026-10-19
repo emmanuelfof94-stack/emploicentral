@@ -737,6 +737,27 @@ export function useJobCandidates(jobId?: number, enabled = true) {
   });
 }
 
+// ---- Contact recruteur (Postuler via WhatsApp) ----
+export interface JobContact {
+  company_name?: string | null;
+  whatsapp?: string | null;
+}
+
+export function useJobContact(jobId?: number, enabled = true) {
+  return useQuery({
+    queryKey: ['job_contact', jobId],
+    enabled: enabled && !!jobId,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<JobContact> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/recruiter/contact/${jobId}`,
+        method: 'GET',
+      });
+      return (res?.data ?? res ?? {}) as JobContact;
+    },
+  });
+}
+
 // ---- Admin : modération des offres recruteur ----
 export interface PendingPosting {
   posting_id: number;
