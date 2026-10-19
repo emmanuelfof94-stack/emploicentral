@@ -76,6 +76,15 @@ def _is_live(job: Job_offers) -> bool:
     return not (job.valid_through and job.valid_through < _today())
 
 
+# Sources sans contenu propre (ajout manuel, texte générique) : visibles sur le site
+# mais pas proposées à Google (contenu « mince » qui pénaliserait tout le domaine).
+_NON_INDEXABLE_SOURCES = {"LinkedIn"}
+
+
+def _indexable(job: Job_offers) -> bool:
+    return _is_live(job) and (job.source or "") not in _NON_INDEXABLE_SOURCES
+
+
 def _to_public(job: Job_offers) -> PublicJob:
     return PublicJob(
         id=job.id, title=_text(job.title), company=_text(job.company), location=job.location,
@@ -258,10 +267,11 @@ async def offer_page(job_id: int, db: AsyncSession = Depends(get_db)):
     if not job:
         return _render_index("Offre introuvable | EmploiCentral", "Cette offre n'existe pas ou plus.", url, noindex=True)
     title = f"{_text(job.title)} — {_text(job.company)}" + (f" ({job.location.split(',')[0]})" if job.location else "")
-    live = _is_live(job)
-    # Offre expirée : page conservée (liens partagés) mais sans JSON-LD et hors index.
+    indexable = _indexable(job)
+    # Offre expirée (ou source non indexable) : page conservée pour les liens partagés,
+    # mais sans JSON-LD et hors index.
     return _render_index(f"{title} | EmploiCentral", _summary(job), url,
-                         jsonld=_job_posting_jsonld(job) if live else None, noindex=not live)
+                         jsonld=_job_posting_jsonld(job) if indexable else None, noindex=not indexable)
 
 
 @router.get("/sitemap.xml", include_in_schema=False)
@@ -274,6 +284,8 @@ async def sitemap(db: AsyncSession = Depends(get_db)):
         (f"{SITE_URL}/login", None, "monthly", "0.5"),
     ]
     for job in rows:
+        if not _indexable(job):
+            continue
         lastmod = _iso_date(job.updated_at) or _iso_date(job.posted_date)
         urls.append((f"{SITE_URL}/offres/{job.id}", lastmod, "weekly", "0.8"))
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',

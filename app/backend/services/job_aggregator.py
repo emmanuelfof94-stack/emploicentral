@@ -215,6 +215,28 @@ def _extract_external_id(url: str, id_re: Pattern) -> Optional[str]:
     return m.group(1) if m else None
 
 
+_BLOCK_END_RE = re.compile(r"</(?:p|div|h[1-6]|li|ul|ol|tr)\s*>|<br\s*/?>", re.I)
+_LI_START_RE = re.compile(r"<li[^>]*>", re.I)
+
+
+def _html_to_text(text: str) -> str:
+    """HTML → texte lisible en gardant paragraphes et puces (affiché en pre-line)."""
+    t = _LI_START_RE.sub("\n• ", text or "")
+    t = _BLOCK_END_RE.sub("\n", t)
+    t = _html_unescape(_HTML_TAG_RE.sub(" ", t))
+    lines = [re.sub(r"[ \t\xa0]+", " ", ln).strip() for ln in t.split("\n")]
+    merged: List[str] = []
+    for ln in lines:
+        if not ln:
+            continue
+        if merged and merged[-1] == "•":  # puce vide (listes imbriquées) → fusion
+            merged[-1] = "• " + ln.lstrip("• ")
+        else:
+            merged.append(ln)
+    out = "\n".join(merged)
+    return re.sub(r"\n{3,}", "\n\n", out).strip()
+
+
 def _strip_html(text: str) -> str:
     # Retire les balises PUIS décode les entités HTML (&rsquo; &#9679; &amp; …).
     stripped = _HTML_TAG_RE.sub(" ", text or "")
@@ -276,33 +298,112 @@ def normalize_contract_type(raw: Optional[str]) -> str:
 # Canonical sectors with keyword rules (ordered by priority — first hit wins).
 # Used both to consolidate scraped labels and to INFER a sector from the job
 # title/description when the source provides none.
+# Secteurs canoniques (= métier du poste) et mots-clés. Chaque mot-clé est cherché
+# en DÉBUT de mot (« audit » trouve « auditeur », pas « inaudible ») ; les mots-clés
+# courts (≤ 3 lettres) ou finis par une espace doivent être un mot ENTIER ; FR + EN car
+# certaines sources (Tectra, LinkedIn) publient en anglais.
 _SECTOR_RULES = [
-    (["fintech", "paiement mobile", "mobile money", "monétique"], "Fintech"),
-    (["télécom", "telecom", "télécommunication", "fibre optique", "gsm"], "Télécommunications"),
-    (
-        ["développeur", "developpeur", "logiciel", "software", "informatique", "technolog",
-         "data", "devops", "programmation", "réseau informatique", "cybersécurité", "web"],
-        "Informatique / Tech",
-    ),
-    (["comptab", "audit", "fiscal", "contrôle de gestion"], "Comptabilité / Audit"),
-    (["banque", "bancaire", "finance", "crédit", "microfinance", "assurance"], "Finance / Banque"),
-    (["marketing", "communication", "community manager", "seo", "publicité", "média", "contenu"],
-     "Marketing / Communication"),
-    (["logistique", "supply chain", "transport", "approvisionnement", "fret", "douane",
-      "import-export", "magasinier"], "Logistique / Transport"),
-    (["btp", "construction", "génie civil", "chantier", "bâtiment", "immobilier", "architecte", "travaux"],
-     "BTP / Construction"),
-    (["commercial", "vente", "business development", "négociation", "télévente", "sales", "caissier"],
-     "Commerce / Vente"),
-    (["ressources humaines", "recrutement", "paie", "talent"], "Ressources Humaines"),
-    (["santé", "médical", "infirmier", "médecin", "pharmac", "hôpital", "soignant"], "Santé"),
-    (["enseign", "formation", "pédagog", "éducation", "professeur", "formateur"], "Éducation / Formation"),
-    (["juridique", "avocat", "juriste", "droit "], "Juridique"),
-    (["agro", "agricole", "agriculture", "élevage", "agronome"], "Agroalimentaire / Agriculture"),
-    (["industrie", "production", "usine", "manufactur", "maintenance", "mécanique", "électricité", "ingénieur"],
-     "Industrie"),
-    (["hôtel", "restauration", "tourisme", "accueil"], "Hôtellerie / Tourisme"),
+    ("Fintech", ["fintech", "paiement mobile", "mobile money", "monétique"]),
+    ("Télécommunications", ["télécom", "telecom", "fibre optique", "gsm", "radio fréquence", "rf engineer"]),
+    ("Informatique / Tech", [
+        "développeu", "developpeu", "developer", "logiciel", "software", "informatique", "it ",
+        "data", "devops", "programmation", "programmeu", "réseau", "network", "cybersécurité", "cybersecurity",
+        "web", "full stack", "fullstack", "frontend", "front-end", "backend", "back-end",
+        "sap", "erp", "cloud", "système d'information", "système", "systems", "helpdesk",
+        "support it", "qa ", "quality assurance", "ui", "ux", "machine learning", "ia ", "ai ",
+        "intelligence artificielle", "digital", "numérique", "python", "java", ".net", "php",
+        "blockchain", "crypto", "rust",
+    ]),
+    ("Comptabilité / Audit", [
+        "comptab", "audit", "fiscal", "contrôle de gestion", "contrôleur de gestion", "trésor",
+        "accountant", "accounting", "bookkeep", "controller", "payroll accountant",
+    ]),
+    ("Finance / Banque", [
+        "banque", "bancaire", "finance", "financ", "crédit", "microfinance", "assurance",
+        "actuair", "bank", "insurance", "investment", "chargé d'affaires", "conseiller clientèle",
+        "souscripteur", "risk", "risque", "compliance", "conformité", "recouvrement",
+    ]),
+    ("Marketing / Communication", [
+        "marketing", "communication", "community manager", "seo", "publicité", "média",
+        "contenu", "content", "brand", "marque", "graphi", "motion", "designer", "rédact",
+        "journalis", "éditorial", "relations presse", "social media", "vidéaste", "cadreur",
+        "monteur vidéo", "photograph", "événementiel", "events",
+    ]),
+    ("Logistique / Transport", [
+        "logisti", "supply chain", "transport", "approvisionnement", "fret", "douane", "transit",
+        "import-export", "magasinier", "chauffeur", "driver", "cargo", "achat", "acheteur",
+        "procurement", "flotte", "entrepôt", "warehouse", "shipping", "maritime", "portuaire",
+        "conducteur routier", "conducteurs routiers", "routier", "livreu", "coursier",
+    ]),
+    ("BTP / Construction", [
+        "btp", "construction", "génie civil", "chantier", "bâtiment", "immobilier", "architect",
+        "travaux", "topograph", "conducteur de travaux", "civil engineer", "maçon", "plombier",
+    ]),
+    ("Commerce / Vente", [
+        "commercia", "vente", "vendeu", "business development", "business developer",
+        "négociat", "télévente", "sales", "caissi", "account manager", "key account",
+        "merchandis", "bizdev", "téléconseiller", "call center", "centre d'appels", "customer service",
+        "service client", "relation client", "agent commercial", "boutique", "retail",
+    ]),
+    ("Ressources Humaines", [
+        "ressources humaines", "rh ", "recrutement", "recruteu", "recruiter", "paie",
+        "talent", "human resources", "hr ", "people", "formation du personnel",
+        "administration du personnel", "gestion du personnel",
+    ]),
+    ("Santé", [
+        "santé", "médic", "infirmi", "médecin", "pharmac", "hôpital", "soignant", "sage-femme",
+        "laborantin", "laboratoire", "laboratory", "nurse", "medical", "health", "clinique",
+        "biolog", "opticien", "dentist", "kiné",
+    ]),
+    ("Éducation / Formation", [
+        "enseign", "formation", "pédagog", "éducat", "professeur", "formateur", "teacher",
+        "instituteur", "école", "tutor", "trainer", "e-learning", "coach",
+    ]),
+    ("Juridique", ["juridique", "avocat", "juriste", "notaire", "legal", "lawyer", "droit des",
+                   "propriété intellectuelle", "intellectual property"]),
+    ("Agroalimentaire / Agriculture", [
+        "agro", "agricole", "agriculture", "élevage", "agronom", "farm", "cacao", "hévéa",
+        "palmier", "plantation", "pêche", "vétérinaire",
+    ]),
+    ("Énergie / Mines", [
+        "énergie", "energy", "électricité", "pétrol", "petroleum", "gaz", "oil", "mine",
+        "minier", "mining", "solaire", "solar", "électrici", "hse", "qhse",
+    ]),
+    ("Industrie", [
+        "industri", "production", "usine", "manufactur", "maintenance", "mécani", "électromécani",
+        "ingénierie", "qualité", "chimie", "métallurgie", "textile", "plasturg", "technicien",
+        "operator", "opérateur",
+    ]),
+    ("Hôtellerie / Tourisme", [
+        "hôtel", "hotel", "restaura", "tourisme", "cuisin", "chef cuisinier", "serveu",
+        "barman", "réception", "receptionist", "housekeep", "voyage", "travel",
+    ]),
+    ("Administration / Secrétariat", [
+        "assistant", "assistante", "secrétai", "secretary", "administrati", "admin ",
+        "office manager", "accueil", "archiv", "standardiste", "gestionnaire de bureau",
+        "saisie", "services généraux", "moyens généraux",
+    ]),
+    ("Humanitaire / ONG", [
+        "humanitaire", "ong", "ngo", "unicef", "pnud", "undp", "unfpa", "programme alimentaire",
+        "msf", "médecins sans frontières", "croix-rouge", "suivi-évaluation", "suivi, évaluation",
+        "monitoring and evaluation", "développement communautaire",
+    ]),
+    ("Sécurité / Gardiennage", ["sécurité privée", "gardien", "vigile", "agent de sécurité", "security guard"]),
+    ("Direction / Management", [
+        "directeur", "directrice", "director", "country manager", "general manager",
+        "chef de projet", "project manager", "manager", "responsable", "coordinat", "gérant",
+    ]),
 ]
+
+# Compilé une fois : (libellé, [motifs « début de mot »]).
+_SECTOR_PATTERNS = [
+    (label, [re.compile(r"(?<![\w])" + re.escape(k.strip())
+                        + (r"(?![\w])" if k.endswith(" ") or len(k.strip()) <= 3 else ""), re.I)
+             for k in keys])
+    for label, keys in _SECTOR_RULES
+]
+# Secteurs « fonction transverse » : ne l'emportent que faute de mieux.
+_WEAK_SECTORS = {"Direction / Management", "Administration / Secrétariat"}
 
 
 _APOS_RE = re.compile(r"[`´’']")
@@ -388,27 +489,52 @@ def normalize_location(raw: Optional[str]) -> Optional[str]:
     return ", ".join(parts) if parts else str(raw).strip()
 
 
+_BIZDEV_RE = re.compile(r"business\s+develop\w*", re.I)
+
+
+def _sector_scores(text: str, weight: float, scores: Dict[str, float]) -> None:
+    # « Business Developer » est un poste commercial, pas de développeur.
+    text = _BIZDEV_RE.sub("bizdev", text)
+    for label, patterns in _SECTOR_PATTERNS:
+        hits = sum(1 for pat in patterns if pat.search(text))
+        if hits:
+            scores[label] = scores.get(label, 0.0) + weight * hits
+
+
 def _classify_sector(text: str) -> Optional[str]:
-    low = (text or "").lower()
-    for keywords, label in _SECTOR_RULES:
-        if any(k in low for k in keywords):
-            return label
-    return None
+    scores: Dict[str, float] = {}
+    _sector_scores(text or "", 1.0, scores)
+    return _best_sector(scores)
+
+
+def _best_sector(scores: Dict[str, float]) -> Optional[str]:
+    if not scores:
+        return None
+    # À score égal ou proche, un métier précis bat une fonction transverse (manager, assistant).
+    ranked = sorted(scores.items(), key=lambda kv: (kv[1] - (0.5 if kv[0] in _WEAK_SECTORS else 0)), reverse=True)
+    return ranked[0][0]
 
 
 def normalize_sector(raw: Optional[str], title: str = "", description: str = "") -> Optional[str]:
-    """Map a raw sector label to a canonical sector. If no usable label, infer one
-    from the job title/description. Returns None only when nothing can be inferred."""
-    raw_clean = (raw or "").strip()
-    if raw_clean:
-        hit = _classify_sector(raw_clean)
-        if hit:
-            return hit
-        # Unknown but explicit label → keep it (cleaned) rather than lose information.
-        return raw_clean
-    # No source sector → infer, prioritising the title (more reliable than the
-    # description, which often mentions incidental keywords like "outils informatiques").
-    return _classify_sector(title) or _classify_sector(description)
+    """Secteur canonique = métier du POSTE.
+
+    Score pondéré : le titre domine (×4), le libellé de la source aide (×2), la
+    description ne sert qu'en appoint (×0.5, plafonné) — elle cite souvent des mots
+    sans rapport (« outils informatiques », « assurance maladie »). Un libellé de
+    source inconnu n'est plus conservé tel quel : tout tombe dans la liste canonique,
+    sinon « Autres ».
+    """
+    scores: Dict[str, float] = {}
+    _sector_scores(title or "", 4.0, scores)
+    _sector_scores(raw or "", 2.0, scores)
+    desc_scores: Dict[str, float] = {}
+    _sector_scores((description or "")[:1500], 0.5, desc_scores)
+    for label, val in desc_scores.items():
+        scores[label] = scores.get(label, 0.0) + min(val, 1.5)
+    best = _best_sector(scores)
+    if best:
+        return best
+    return "Autres" if (raw or title) else None
 
 
 async def _fetch(
@@ -593,7 +719,7 @@ def _map_to_offer(posting: Dict[str, object], source_url: str, source_name: str)
     contract_type = normalize_contract_type(raw_contract)
 
     raw_description = str(posting.get("description", ""))
-    description = _strip_html(raw_description)[:4000] or None
+    description = _html_to_text(raw_description)[:4000] or None
     if not company or is_operator_company(company):
         company = infer_employer(title, raw_description) or (CONFIDENTIAL_EMPLOYER if company else "")
     company = normalize_company(company) if company else company
@@ -1020,6 +1146,110 @@ async def fix_operator_companies() -> int:
     return fixed
 
 
+# Secteurs canoniques AVANT la refonte du classement (oct. 2026) : en base, on ne
+# sait plus s'ils venaient de la source ou d'une déduction (souvent fausse) → ignorés
+# au reclassement ; les autres valeurs sont des libellés bruts de source, conservés
+# comme indice.
+_LEGACY_CANONICAL_SECTORS = {
+    "Fintech", "Télécommunications", "Informatique / Tech", "Comptabilité / Audit",
+    "Finance / Banque", "Marketing / Communication", "Logistique / Transport",
+    "BTP / Construction", "Commerce / Vente", "Ressources Humaines", "Santé",
+    "Éducation / Formation", "Juridique", "Agroalimentaire / Agriculture", "Industrie",
+    "Hôtellerie / Tourisme",
+}
+_sectors_reclassified = False
+
+
+async def reclassify_sectors() -> int:
+    """Reclasse une fois par processus les offres AGRÉGÉES avec le classement actuel.
+
+    Les offres de recruteurs (secteur choisi par eux) ne sont jamais touchées.
+    """
+    global _sectors_reclassified
+    if _sectors_reclassified or not db_manager.async_session_maker:
+        return 0
+    from sqlalchemy import select
+
+    from models.job_offers import Job_offers
+    from models.job_postings import Job_postings
+
+    changed = 0
+    async with db_manager.async_session_maker() as session:
+        recruiter_ids = set((await session.execute(select(Job_postings.job_id))).scalars().all())
+        rows = (await session.execute(select(Job_offers).where(Job_offers.source.isnot(None)))).scalars().all()
+        for job in rows:
+            if job.id in recruiter_ids:
+                continue
+            raw = job.sector if job.sector and job.sector not in _LEGACY_CANONICAL_SECTORS else None
+            new = normalize_sector(raw, job.title or "", job.description or "")
+            if new == "Autres" and job.sector in _LEGACY_CANONICAL_SECTORS:
+                new = job.sector  # rien de mieux : on garde l'ancien
+            if new and new != job.sector:
+                job.sector = new
+                changed += 1
+        if changed:
+            await session.commit()
+    _sectors_reclassified = True
+    logger.info("Aggregator: secteur reclassé sur %d offre(s)", changed)
+    return changed
+
+
+# Bloc de contenu des pages détail AfriqueEmplois (description complète).
+_AE_PROSE_RE = re.compile(r'<div class="prose[^"]*"[^>]*>', re.I)
+_DIV_TAG_RE = re.compile(r"<(/?)div\b", re.I)
+_enrich_attempted: set = set()
+
+
+def _extract_prose(page: str) -> Optional[str]:
+    m = _AE_PROSE_RE.search(page or "")
+    if not m:
+        return None
+    depth, pos = 1, m.end()
+    for tag in _DIV_TAG_RE.finditer(page, pos):
+        depth += -1 if tag.group(1) else 1
+        if depth == 0:
+            return page[m.end():tag.start()]
+    return None
+
+
+async def enrich_short_descriptions(client: httpx.AsyncClient, limit: int = 40) -> int:
+    """Complète les descriptions tronquées (~200 car.) d'AfriqueEmplois depuis la page
+    détail, par lots (politesse). Recalcule employeur et secteur avec le texte complet."""
+    if not db_manager.async_session_maker:
+        return 0
+    from sqlalchemy import func, select
+
+    from models.job_offers import Job_offers
+
+    enriched = 0
+    async with db_manager.async_session_maker() as session:
+        rows = (await session.execute(
+            select(Job_offers)
+            .where(Job_offers.source == "AfriqueEmplois", func.length(Job_offers.description) < 400,
+                   Job_offers.source_url.isnot(None))
+            .order_by(Job_offers.id.desc())
+        )).scalars().all()
+        rows = [r for r in rows if r.id not in _enrich_attempted][:limit]
+        for job in rows:
+            _enrich_attempted.add(job.id)
+            page = await _fetch(client, job.source_url)
+            await asyncio.sleep(0.7)
+            body = _extract_prose(page or "")
+            text = _html_to_text(body or "")
+            if len(text) <= len(job.description or ""):
+                continue
+            job.description = text[:4000]
+            if job.company == CONFIDENTIAL_EMPLOYER:
+                job.company = (infer_employer(job.title, body) or CONFIDENTIAL_EMPLOYER)[:255]
+            job.sector = normalize_sector(None, job.title or "", job.description)
+            enriched += 1
+        if enriched:
+            await session.commit()
+    if rows:
+        logger.info("Aggregator: %d/%d description(s) complétée(s)", enriched, len(rows))
+    return enriched
+
+
 async def run_aggregation() -> int:
     """Exécute une passe d'agrégation sur toutes les sources. Renvoie le nb inséré."""
     if not aggregator_enabled():
@@ -1032,6 +1262,7 @@ async def run_aggregation() -> int:
     # Toujours expirer les offres périmées, même si aucune nouvelle n'est insérée.
     await expire_stale_offers()
     await fix_operator_companies()
+    await reclassify_sectors()
 
     only = _enabled_source_names()
     sources = [s for s in SOURCES if only is None or str(s["name"]).lower() in only]
@@ -1064,6 +1295,12 @@ async def run_aggregation() -> int:
                             logger.error("Aggregator[%s]: insertion échouée (%s): %s", name, offer.get("title"), exc)
                     inserted += src_inserted
                     logger.info("Aggregator[%s]: %d nouvelle(s) offre(s)", name, src_inserted)
+
+            if any(str(src["name"]) == "AfriqueEmplois" for src in sources):
+                try:
+                    await enrich_short_descriptions(client)
+                except Exception as exc:  # pragma: no cover - défensif
+                    logger.error("Aggregator: enrichissement des descriptions en échec: %s", exc)
     except Exception as exc:  # pragma: no cover - défensif
         logger.error("Aggregator: passe interrompue: %s", exc, exc_info=True)
 
