@@ -985,6 +985,71 @@ export function useInvalidate() {
 
 export { useMutation };
 
+// ---- Candidature en 1 clic (préparée par l'IA, validée par le candidat) ----
+export type ApplyChannel = 'recruiter' | 'email' | 'external' | 'none';
+
+export interface ApplicationDraft {
+  channel: ApplyChannel;
+  recipient_label?: string | null;
+  source_url?: string | null;
+  subject: string;
+  paragraphs: string[];
+  ai_generated: boolean;
+  already_sent_at?: string | null;
+  daily_remaining: number;
+}
+
+export interface SentApplication {
+  id: number;
+  job_id: number;
+  job_title?: string | null;
+  company?: string | null;
+  channel: ApplyChannel;
+  status: string;
+  created_at?: string | null;
+}
+
+export function useMyApplications(enabled = true) {
+  return useQuery({
+    queryKey: ['applications'],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async (): Promise<SentApplication[]> => {
+      const res = await client.apiCall.invoke({ url: '/api/v1/applications/mine', method: 'GET' });
+      return ((res?.data ?? res) || []) as SentApplication[];
+    },
+  });
+}
+
+export function useApplicationActions() {
+  const invalidate = useInvalidate();
+  return {
+    prepare: async (jobId: number): Promise<ApplicationDraft> => {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/applications/prepare?job_id=${jobId}`,
+        method: 'GET',
+      });
+      return (res?.data ?? res) as ApplicationDraft;
+    },
+    send: async (jobId: number, template: string, paragraphs: string[]) => {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/applications/send',
+        method: 'POST',
+        data: { job_id: jobId, template, paragraphs },
+      });
+      await Promise.all([invalidate('applications'), invalidate('user_jobs')]);
+      return (res?.data ?? res) as { ok: boolean; recipient_label?: string | null };
+    },
+  };
+}
+
+/** Message d'erreur renvoyé par le backend (`detail`), sinon le message par défaut. */
+export function apiErrorDetail(e: unknown, fallback: string): string {
+  const anyE = e as { response?: { data?: { detail?: unknown } }; data?: { detail?: unknown } };
+  const d = anyE?.response?.data?.detail ?? anyE?.data?.detail;
+  return typeof d === 'string' && d ? d : fallback;
+}
+
 // ---- Offres publiques (sans compte, SEO / Google for Jobs) ----
 export interface PublicJob extends Job {
   expired: boolean;

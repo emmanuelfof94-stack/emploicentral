@@ -17,8 +17,10 @@ import logging
 import os
 import re
 import smtplib
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -166,6 +168,58 @@ async def send_email(to_addr: str, subject: str, html: str) -> bool:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Envoi email échoué (%s): %s", to_addr, exc)
         return False
+
+
+def _send_email_with_attachments_sync(
+    to_addr: str, subject: str, html: str, attachments: List[tuple],
+    reply_to: str = "", from_name: str = "", bcc: str = "",
+) -> None:
+    host, port = _env("SMTP_HOST"), int(_env("SMTP_PORT") or 587)
+    user, password = _env("SMTP_USER"), _env("SMTP_PASSWORD")
+    from_addr = _env("SMTP_FROM") or user
+    msg = MIMEMultipart("mixed")
+    msg["Subject"] = subject
+    msg["From"] = formataddr((from_name, from_addr)) if from_name else from_addr
+    msg["To"] = to_addr
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(re.sub(r"<[^>]+>", "", html), "plain", "utf-8"))
+    body.attach(MIMEText(html, "html", "utf-8"))
+    msg.attach(body)
+    for filename, data, mime_subtype in attachments:
+        part = MIMEApplication(data, _subtype=mime_subtype)
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+        msg.attach(part)
+    rcpts = [to_addr] + ([bcc] if bcc else [])
+    with smtplib.SMTP(host, port, timeout=30) as server:
+        if (_env("SMTP_USE_TLS") or "true").lower() in ("1", "true", "yes", "on"):
+            server.starttls()
+        server.login(user, password)
+        server.sendmail(from_addr, rcpts, msg.as_string())
+
+
+async def send_email_with_attachments(
+    to_addr: str, subject: str, html: str, attachments: List[tuple],
+    reply_to: str = "", from_name: str = "", bcc: str = "",
+) -> Optional[str]:
+    """Envoie un e-mail avec pièces jointes `(nom, octets, sous-type MIME)`.
+
+    Contrairement à `send_email`, renvoie le message d'erreur (None = succès) :
+    l'appelant doit pouvoir dire au candidat que sa candidature n'est PAS partie."""
+    if not email_available():
+        return "Envoi d'e-mails non configuré sur le serveur."
+    if not to_addr:
+        return "Destinataire manquant."
+    try:
+        await asyncio.to_thread(
+            _send_email_with_attachments_sync, to_addr, subject, html, attachments,
+            reply_to, from_name, bcc,
+        )
+        return None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Envoi email avec PJ échoué (%s): %s", to_addr, exc)
+        return str(exc)[:300] or "Échec de l'envoi."
 
 
 async def send_email_debug(to_addr: str) -> Dict[str, Any]:
