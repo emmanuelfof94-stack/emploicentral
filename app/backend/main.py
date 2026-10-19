@@ -89,6 +89,12 @@ async def lifespan(app: FastAPI):
     # MODULE_SHUTDOWN_END
 
 
+# Suivi des erreurs Sentry : inactif tant que SENTRY_DSN n'est pas défini.
+# Initialisé AVANT la création de l'app pour que l'intégration FastAPI s'y accroche.
+from core.observability import init_sentry
+
+init_sentry()
+
 # SECURITE: la doc interactive (/docs, /redoc, /openapi.json) expose toute la surface
 # de l'API. On ne l'active qu'en mode debug ; en production elle est désactivée.
 _docs_enabled = bool(getattr(settings, "debug", False))

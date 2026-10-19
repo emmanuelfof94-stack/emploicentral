@@ -48,6 +48,12 @@ services:
         sync: false
       - key: FRONTEND_URL          # l'URL Render finale (https://emploicentral.onrender.com)
         sync: false
+      # Suivi des erreurs Sentry : DÉSACTIVÉ tant que vide. Coller le DSN du projet Sentry
+      # dans le dashboard Render (ne jamais le committer). `environment` = ENVIRONMENT.
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_TRACES_SAMPLE_RATE   # part des requêtes tracées (perf), garder bas
+        value: "0.05"
       # SMTP Gmail (déjà utilisé en prod).
       - key: SMTP_HOST
         value: smtp.gmail.com
