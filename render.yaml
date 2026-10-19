@@ -48,6 +48,12 @@ services:
         sync: false
       - key: FRONTEND_URL          # l'URL Render finale (https://emploicentral.onrender.com)
         sync: false
+      # Paiement Wave Checkout : DÉSACTIVÉ tant que WAVE_API_KEY est vide (valeurs dans le
+      # dashboard Render uniquement, jamais dans le dépôt).
+      - key: WAVE_API_KEY
+        sync: false
+      - key: WAVE_WEBHOOK_SECRET
+        sync: false
       # Suivi des erreurs Sentry : DÉSACTIVÉ tant que vide. Coller le DSN du projet Sentry
       # dans le dashboard Render (ne jamais le committer). `environment` = ENVIRONMENT.
       - key: SENTRY_DSN

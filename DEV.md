@@ -45,6 +45,7 @@ désactivées tant que non renseignées) :
 | `OSS_SERVICE_URL` / `OSS_API_KEY` | Upload de CV (stockage objet) |
 | `STRIPE_SECRET_KEY` | Paiements |
 | `SENTRY_DSN` (+ `SENTRY_TRACES_SAMPLE_RATE`, défaut 0.05) | Suivi des erreurs backend (Sentry) — inactif si vide |
+| `WAVE_API_KEY` / `WAVE_WEBHOOK_SECRET` | Paiement automatique Wave Checkout — inactif si `WAVE_API_KEY` est vide |
 
 > Sans OIDC, la navigation publique (landing, liste d'offres) fonctionne mais
 > la connexion et les pages protégées (Dashboard, Profile, Alerts) ne sont pas accessibles.
@@ -203,6 +204,21 @@ les offres actives aux alertes (`alert_preferences`) et notifie les nouvelles co
   Les tests marqués `xfail` documentent des bugs connus non encore corrigés.
 - **CI** : `.github/workflows/ci.yml` lance à chaque push / PR les tests backend (Python 3.11,
   comme l'image Render), le typecheck (`tsc --noEmit -p tsconfig.app.json`) et le lint du front.
+
+## Paiement automatique Wave — désactivé par défaut
+
+`routers/payments.py` + `services/wave.py` (API Wave Checkout). Sans `WAVE_API_KEY`, seul le
+flux manuel existe (numéro mobile money + validation admin). Avec la clé, la page d'un cours
+payant affiche « Payer avec Wave » : session Wave → retour sur `/paiement/retour?checkout=<id>`
+→ le serveur relit la session **chez Wave** et inscrit `course_purchases` en `paid` si
+`payment_status == succeeded` (montant, devise XOF et `client_reference` vérifiés).
+Le webhook `POST /api/v1/payments/wave/webhook` fait de même, signé (`Wave-Signature`,
+HMAC-SHA256, secret `WAVE_WEBHOOK_SECRET`) ; sans secret, tout webhook est refusé (401).
+Tentatives suivies dans la table `wave_checkouts`.
+
+Mise en service : compte Wave Business → clé API (permission Checkout) → `WAVE_API_KEY` sur
+Render ; dans le portail Wave, webhook vers `https://emploicentral.onrender.com/api/v1/payments/wave/webhook`
+(stratégie « Signing Secret », événements `checkout.session.*`) → `WAVE_WEBHOOK_SECRET`.
 
 ## Suivi des erreurs (Sentry) — désactivé par défaut
 `core/observability.py` initialise `sentry-sdk` (intégration FastAPI) **uniquement si

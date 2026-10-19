@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useCourseAccess, useCourseAccessActions } from '../hooks/useApi';
+import { startWaveCheckout } from '../hooks/usePayments';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,9 @@ export default function CourseAccess() {
   const { requestAccess } = useCourseAccessActions();
   const [ref, setRef] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [startingWave, setStartingWave] = useState(false);
+  // Paiement automatique Wave disponible (clé configurée côté serveur) ?
+  const waveEnabled = !!(access as { wave_enabled?: boolean } | undefined)?.wave_enabled;
   const [contentUrl, setContentUrl] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
   const sale = SALES[slug];
@@ -107,6 +111,18 @@ export default function CourseAccess() {
       toast.error("Échec de l'envoi. Réessayez.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const onPayWithWave = async () => {
+    setStartingWave(true);
+    try {
+      // Redirection vers Wave (appli ou page de paiement) ; retour sur /paiement/retour.
+      window.location.assign(await startWaveCheckout(slug));
+    } catch (e) {
+      const anyE = e as { response?: { data?: { detail?: string } }; data?: { detail?: string } };
+      toast.error(anyE?.response?.data?.detail || anyE?.data?.detail || 'Paiement Wave indisponible. Réessayez.');
+      setStartingWave(false);
     }
   };
 
@@ -179,6 +195,32 @@ export default function CourseAccess() {
           </div>
         ) : (
           <>
+            {waveEnabled && (
+              <>
+                <Button
+                  onClick={onPayWithWave}
+                  disabled={startingWave}
+                  className="w-full bg-[#1DC8FF] hover:bg-[#12b5ea] text-slate-900 font-semibold"
+                >
+                  {startingWave ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ouverture de Wave…
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="h-4 w-4 mr-2" /> Payer {access?.price} avec Wave
+                    </>
+                  )}
+                </Button>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Accès débloqué automatiquement dès le paiement.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" /> ou paiement manuel (Orange Money…)
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             <div className="rounded-lg bg-muted p-4 space-y-2">
               <p className="text-sm font-medium flex items-center gap-2">
                 <Smartphone className="h-4 w-4" /> Comment payer

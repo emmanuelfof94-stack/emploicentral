@@ -37,6 +37,7 @@ const RecruiterSignup = lazy(() => import('./pages/RecruiterSignup'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const Trainings = lazy(() => import('./pages/Trainings'));
 const CourseAccess = lazy(() => import('./pages/CourseAccess'));
+const PaymentReturn = lazy(() => import('./pages/PaymentReturn'));
 const AdminCoursePurchases = lazy(() => import('./pages/AdminCoursePurchases'));
 const MarketTrends = lazy(() => import('./pages/MarketTrends'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
@@ -77,6 +78,7 @@ const AppRoutes = () => (
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
     <Route path="/trainings" element={<ProtectedRoute><Trainings /></ProtectedRoute>} />
     <Route path="/cours/:slug" element={<ProtectedRoute><CourseAccess /></ProtectedRoute>} />
+    <Route path="/paiement/retour" element={<ProtectedRoute><PaymentReturn /></ProtectedRoute>} />
     <Route path="/market" element={<ProtectedRoute><MarketTrends /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />

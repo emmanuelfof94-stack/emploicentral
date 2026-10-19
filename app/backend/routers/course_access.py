@@ -4,6 +4,7 @@ Accès payant aux cours protégés (paiement mobile money manuel + validation ad
 Flux :
 1. `GET  /api/v1/course-access/{slug}/status`  → l'utilisateur a-t-il accès ?
 2. `POST /api/v1/course-access/{slug}/request`  → le candidat déclare avoir payé (pending) + notifie l'admin
+   (ou paiement automatique Wave : voir `routers/payments.py`, qui inscrit directement status=paid)
 3. Admin valide via `/admin/purchases/{id}/validate` → status=paid → accès débloqué
 4. `GET  /api/v1/course-access/{slug}/content`   → sert le HTML du cours UNIQUEMENT aux ayants droit
 """
@@ -27,7 +28,7 @@ from models.auth import User
 from models.course_purchases import Course_purchases
 from models.notifications import Notification
 from schemas.auth import UserResponse
-from services import training_quota
+from services import training_quota, wave
 from services.notifications import send_email
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class AccessStatus(BaseModel):
     status: str  # none / pending / paid / rejected
     sales_paused: bool = False
     paused_reason: Optional[str] = None
+    wave_enabled: bool = False  # paiement automatique Wave disponible (sinon flux manuel seul)
 
 
 class AdminPurchase(BaseModel):
@@ -115,6 +117,7 @@ def _status(slug: str, course: dict, status: str) -> AccessStatus:
         payment_number=PAYMENT_NUMBER, has_access=(status == "paid"), status=status,
         sales_paused=bool(course.get("sales_paused")),
         paused_reason=course.get("paused_reason") if course.get("sales_paused") else None,
+        wave_enabled=wave.wave_enabled(),
     )
 
 
