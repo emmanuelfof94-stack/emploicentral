@@ -123,14 +123,15 @@ SOURCES: List[Dict[str, object]] = [
         "paginate": False,
     },
     {
-        # La page pays embarque un ItemList JSON-LD avec ~10 JobPosting complets :
-        # une seule requête suffit, pas besoin de crawler les pages détail.
+        # AfriqueEmplois (opérateur « E-Faso ») : la page liste n'embarque plus de
+        # JobPosting (oct. 2026) → crawl des pages détail, dont le JSON-LD porte le
+        # VRAI employeur. Les liens de la liste sont absolus ; pagination ?page=N.
         "name": "AfriqueEmplois",
         "base": "https://afriqueemplois.com",
         "listing_path": "/ci",
-        "mode": "listing_jsonld",
+        "offer_re": re.compile(r"https://afriqueemplois\.com/ci/post/\d+", re.I),
         "id_re": re.compile(r"/post/(\d+)"),
-        "paginate": False,
+        "paginate": True,
     },
     {
         # Educarriere.ci : 1er site emploi ivoirien. Board server-rendered (pas de
@@ -520,6 +521,50 @@ def _sane_posted_date(raw: Optional[str]) -> Optional[str]:
     return head
 
 
+# Opérateurs de sites d'annonces déclarés à tort comme `hiringOrganization`
+# (le vrai employeur est alors dans la description ou le titre).
+_OPERATOR_COMPANIES = {"e-faso"}
+CONFIDENTIAL_EMPLOYER = "Employeur confidentiel"
+
+# « Entreprise : LEADWAY ASSURANCE » en tête de description (HTML ou texte aplati,
+# où l'étiquette suivante est collée : « …ASSURANCELieu : Abidjan »).
+_DESC_EMPLOYER_RE = re.compile(
+    r"Entreprise\s*:\s*(?:</strong>)?\s*(.+?)(?=<|Lieu\s*:|Type de contrat\s*:|Date limite\s*:|\n|$)",
+    re.I,
+)
+# « Wave recrute un… », « Les Écoles Maarif recrutent… »
+_TITLE_EMPLOYER_RE = re.compile(r"^(.+?)\s+recrute(?:nt)?\b", re.I)
+_LEADING_ARTICLE_RE = re.compile(r"^(?:la|le|les)\s+|^l['’]\s*", re.I)
+
+
+_CONFIDENTIAL_NAMES = {"confidential company", "confidential", "confidentiel", "entreprise confidentielle"}
+# Certaines sources mettent un niveau d'études dans `industry` (« Niveau BAC », « < BEPC »).
+_EDUCATION_LEVEL_RE = re.compile(r"\b(?:bac|bepc|cepe|niveau|licence|master|doctorat)\b", re.I)
+
+
+def normalize_company(name: str) -> str:
+    return CONFIDENTIAL_EMPLOYER if name.strip().lower() in _CONFIDENTIAL_NAMES else name.strip()
+
+
+def is_operator_company(company: Optional[str]) -> bool:
+    return (company or "").strip().lower() in _OPERATOR_COMPANIES
+
+
+def infer_employer(title: str, description: Optional[str]) -> Optional[str]:
+    """Vrai employeur d'une annonce d'opérateur : description, puis titre."""
+    m = _DESC_EMPLOYER_RE.search(description or "")
+    if m:
+        name = _html_unescape(m.group(1)).strip(" .:-–")
+        if 2 <= len(name) <= 80:
+            return normalize_company(name)
+    m = _TITLE_EMPLOYER_RE.match((title or "").strip())
+    if m:
+        name = _LEADING_ARTICLE_RE.sub("", m.group(1)).strip(" .:-–")
+        if 2 <= len(name) <= 80:
+            return name[0].upper() + name[1:]
+    return None
+
+
 def _map_to_offer(posting: Dict[str, object], source_url: str, source_name: str) -> Optional[Dict[str, object]]:
     """Transforme un JobPosting schema.org en ligne `job_offers`."""
     title = (posting.get("title") or "").strip() if isinstance(posting.get("title"), str) else ""
@@ -547,11 +592,15 @@ def _map_to_offer(posting: Dict[str, object], source_url: str, source_name: str)
         raw_contract = ", ".join(str(x) for x in raw_contract)
     contract_type = normalize_contract_type(raw_contract)
 
-    description = _strip_html(str(posting.get("description", "")))[:4000] or None
+    raw_description = str(posting.get("description", ""))
+    description = _strip_html(raw_description)[:4000] or None
+    if not company or is_operator_company(company):
+        company = infer_employer(title, raw_description) or (CONFIDENTIAL_EMPLOYER if company else "")
+    company = normalize_company(company) if company else company
     requirements = _strip_html(str(posting.get("qualifications") or posting.get("experienceRequirements") or "")) or None
 
     industry = posting.get("industry")
-    raw_sector = industry if isinstance(industry, str) else None
+    raw_sector = industry if isinstance(industry, str) and not _EDUCATION_LEVEL_RE.search(industry) else None
     sector = normalize_sector(raw_sector, title, description or "")
 
     salary_range = None
@@ -941,6 +990,36 @@ async def expire_stale_offers() -> int:
         return n
 
 
+async def fix_operator_companies() -> int:
+    """Corrige les offres déjà en base attribuées à un opérateur (ex. « E-Faso »).
+
+    Idempotent : une fois corrigée, l'offre ne correspond plus au filtre.
+    """
+    if not db_manager.async_session_maker:
+        return 0
+    from sqlalchemy import func, select
+
+    from models.job_offers import Job_offers
+
+    fixed = 0
+    async with db_manager.async_session_maker() as session:
+        rows = (await session.execute(
+            select(Job_offers).where(
+                func.lower(Job_offers.company).in_(_OPERATOR_COMPANIES | _CONFIDENTIAL_NAMES)
+            )
+        )).scalars().all()
+        for job in rows:
+            if is_operator_company(job.company):
+                job.company = (infer_employer(job.title, job.description) or CONFIDENTIAL_EMPLOYER)[:255]
+            else:
+                job.company = CONFIDENTIAL_EMPLOYER
+            fixed += 1
+        if fixed:
+            await session.commit()
+            logger.info("Aggregator: employeur corrigé sur %d offre(s) d'opérateur", fixed)
+    return fixed
+
+
 async def run_aggregation() -> int:
     """Exécute une passe d'agrégation sur toutes les sources. Renvoie le nb inséré."""
     if not aggregator_enabled():
@@ -952,6 +1031,7 @@ async def run_aggregation() -> int:
 
     # Toujours expirer les offres périmées, même si aucune nouvelle n'est insérée.
     await expire_stale_offers()
+    await fix_operator_companies()
 
     only = _enabled_source_names()
     sources = [s for s in SOURCES if only is None or str(s["name"]).lower() in only]
