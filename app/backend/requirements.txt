@@ -40,3 +40,4 @@ stripe>=12.0.0
 
 # Suivi des erreurs (inactif tant que SENTRY_DSN n'est pas défini, cf. core/observability.py)
 sentry-sdk[fastapi]>=2.0,<3
+pywebpush==2.0.3

@@ -51,6 +51,7 @@ for _var in (
     "APP_AI_BASE_URL", "APP_AI_KEY",
     "OIDC_ISSUER_URL", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET",
     "TRAINING_QUOTA_ENABLED",
+    "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT",
     "PUBLIC_SITE_URL",
 ):
     os.environ.pop(_var, None)

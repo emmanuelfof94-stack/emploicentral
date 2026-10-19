@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import {
   useRecruiterJobs,
   useRecruiterJobActions,
-  useJobCandidates,
   type RecruiterJob,
 } from '../hooks/useApi';
+import { useRankedCandidates, useRecruiterStats } from '../hooks/useRecruiterTools';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,23 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Eye,
+  Bookmark,
+  Settings,
 } from 'lucide-react';
+
+const CANDIDATE_STATUS: Record<string, string> = {
+  to_apply: 'Intéressé',
+  applied: 'A postulé',
+  interview: 'Entretien',
+  rejected: 'Non retenu',
+};
+
+function scoreClass(score: number) {
+  if (score >= 70) return 'border-emerald-300 bg-emerald-50 text-emerald-700';
+  if (score >= 40) return 'border-amber-300 bg-amber-50 text-amber-700';
+  return 'border-slate-300 bg-slate-50 text-slate-600';
+}
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'approved')
@@ -54,13 +71,18 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function CandidatesDialog({ job, onClose }: { job: RecruiterJob | null; onClose: () => void }) {
-  const { data: candidates, isLoading } = useJobCandidates(job?.job_id, !!job);
+  const { data: candidates, isLoading } = useRankedCandidates(job?.job_id, !!job);
   return (
     <Dialog open={!!job} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Candidats — {job?.title}</DialogTitle>
         </DialogHeader>
+        {!!candidates?.length && (
+          <p className="text-xs text-slate-500 -mt-2">
+            Classés par compatibilité avec l'offre (compétences, secteur, lieu).
+          </p>
+        )}
         {isLoading ? (
           <div className="flex items-center gap-2 text-slate-500 py-8 justify-center">
             <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
@@ -75,14 +97,28 @@ function CandidatesDialog({ job, onClose }: { job: RecruiterJob | null; onClose:
             {candidates.map((c) => (
               <li key={c.user_id} className="py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-900">{c.name || 'Candidat'}</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    {typeof c.score === 'number' ? (
+                      <Badge variant="outline" className={`shrink-0 ${scoreClass(c.score)}`}>
+                        {c.score}%
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="shrink-0 text-slate-400" title="Profil non analysé">
+                        —
+                      </Badge>
+                    )}
+                    <span className="font-medium text-slate-900 truncate">{c.name || 'Candidat'}</span>
+                  </span>
                   {c.status ? (
-                    <Badge variant="secondary">{c.status}</Badge>
+                    <Badge variant="secondary">{CANDIDATE_STATUS[c.status] || c.status}</Badge>
                   ) : c.saved ? (
-                    <Badge variant="outline">Enregistrée</Badge>
+                    <Badge variant="outline">A enregistré l'offre</Badge>
                   ) : null}
                 </div>
                 {c.job_title && <p className="text-xs text-slate-500 mt-0.5">{c.job_title}</p>}
+                {!!c.strengths?.length && (
+                  <p className="text-xs text-emerald-700 mt-0.5">✓ {c.strengths.join(' · ')}</p>
+                )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-500">
                   {c.email && (
                     <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-blue-600">
@@ -123,6 +159,11 @@ const EMPTY = {
 export default function Recruiter() {
   const { data: jobs, isLoading } = useRecruiterJobs();
   const { create, remove } = useRecruiterJobActions();
+  const { data: stats } = useRecruiterStats();
+  const statsByJob = useMemo(
+    () => new Map((stats?.jobs || []).map((s) => [s.job_id, s])),
+    [stats]
+  );
   const [form, setForm] = useState({ ...EMPTY });
   const [submitting, setSubmitting] = useState(false);
   const [candidatesFor, setCandidatesFor] = useState<RecruiterJob | null>(null);
@@ -160,15 +201,44 @@ export default function Recruiter() {
     <div className="min-h-screen app-surface">
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            Espace recruteur
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Publiez vos offres (validées par notre équipe avant mise en ligne) et suivez les candidats.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary" />
+              Espace recruteur
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Publiez vos offres (validées par notre équipe avant mise en ligne) et suivez les candidats.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/recruiter/company">
+              <Settings className="h-4 w-4 mr-1.5" /> Mon entreprise
+            </Link>
+          </Button>
         </div>
+
+        {/* Statistiques */}
+        {stats && stats.jobs.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Vues (7 jours)', value: stats.views_7d, sub: `${stats.views} au total`, icon: Eye },
+              { label: 'Candidats', value: stats.applicants, sub: stats.views ? `${Math.round((stats.applicants / stats.views) * 100)} % des vues` : '—', icon: Users },
+              { label: 'Enregistrements', value: stats.saves, sub: 'offres mises de côté', icon: Bookmark },
+              { label: 'Offres en ligne', value: stats.offers_online, sub: `sur ${stats.jobs.length}`, icon: CheckCircle2 },
+            ].map(({ label, value, sub, icon: Icon }) => (
+              <Card key={label} className="card-lift">
+                <CardContent className="py-4">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5" /> {label}
+                  </p>
+                  <p className="text-2xl font-bold mt-1 tabular-nums">{value}</p>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Publier une offre */}
         <Card className="card-lift">
@@ -244,9 +314,21 @@ export default function Recruiter() {
                       {j.status === 'rejected' && j.reject_reason && (
                         <p className="text-xs text-red-600 mt-1">Motif : {j.reject_reason}</p>
                       )}
+                      {statsByJob.get(j.job_id) && (
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                          <span className="inline-flex items-center gap-1" title="Vues uniques (appli + page publique)">
+                            <Eye className="h-3.5 w-3.5" /> {statsByJob.get(j.job_id)?.views} vue
+                            {(statsByJob.get(j.job_id)?.views ?? 0) > 1 ? 's' : ''}
+                            <span className="text-slate-400">({statsByJob.get(j.job_id)?.views_7d} sur 7 j)</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Bookmark className="h-3.5 w-3.5" /> {statsByJob.get(j.job_id)?.saves}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="outline" size="sm" onClick={() => setCandidatesFor(j)}>
+                      <Button variant="outline" size="sm" onClick={() => setCandidatesFor(j)} title="Voir les candidats, classés par score">
                         <Users className="h-4 w-4 mr-1.5" />
                         {j.applicants ?? 0}
                       </Button>

@@ -29,6 +29,7 @@ from models.alert_preferences import Alert_preferences
 from models.job_offers import Job_offers
 from models.notifications import Notification
 from models.user_profiles import User_profiles
+from services import web_push
 from services.cv_heuristic import score_profile_job
 
 logger = logging.getLogger(__name__)
@@ -564,6 +565,9 @@ async def dispatch_new_offer_alerts() -> int:
             select(Job_offers).where(Job_offers.is_active == True).order_by(Job_offers.id.desc()).limit(300)
         )).scalars().all()
 
+        # Navigateurs abonnés aux notifications push (opt-in via la permission du navigateur).
+        push_users = set(await web_push.users_with_subscriptions(session)) if web_push.push_available() else set()
+
         for profile in profiles:
             user_id = profile.user_id
             email = (profile.email or "").strip()
@@ -578,6 +582,8 @@ async def dispatch_new_offer_alerts() -> int:
             # WhatsApp reste opt-in (nécessite numéro + fournisseur).
             email_on = True if (pref is None or pref.notify_email is None) else bool(pref.notify_email)
             whatsapp_on = bool(pref.notify_whatsapp) if pref is not None else False
+            # Push : actif dès que le candidat a autorisé un navigateur (opt-out via notify_push=false).
+            push_on = user_id in push_users and (pref is None or pref.notify_push is not False)
 
             # Choix du matcher : critères explicites prioritaires, sinon profil.
             if pref is not None and _has_criteria(pref):
@@ -624,6 +630,8 @@ async def dispatch_new_offer_alerts() -> int:
                     channels.append("email")
                 if whatsapp_ok:
                     channels.append("whatsapp")
+                if push_on:
+                    channels.append("push")
                 session.add(Notification(
                     user_id=user_id, job_id=job.id,
                     title=f"{_score_badge(score)} {score}% · {job.title}",
@@ -640,6 +648,16 @@ async def dispatch_new_offer_alerts() -> int:
                 to_send.append({"type": "email", "to": email,
                                 "subject": _digest_subject(scored_offers),
                                 "html": _digest_email_html(first_name, scored_offers)})
+            if push_on:
+                best = scored_offers[0]
+                more = len(scored_offers) - 1
+                to_send.append({"type": "push", "user_id": user_id, "payload": {
+                    "title": (f"{len(scored_offers)} nouvelles offres pour vous" if more
+                              else "Nouvelle offre pour vous"),
+                    "body": f"{best['score']}% · {best['title']}" + (f" (+{more} autre{'s' if more > 1 else ''})" if more else ""),
+                    "url": "/jobs",
+                    "tag": "new-offers",
+                }})
             if whatsapp_ok:
                 # Paramètres du template WhatsApp Meta : {{1}} prénom, {{2}} nb
                 # d'offres, {{3}} lien. (Ignorés si envoi en texte libre.)
@@ -657,6 +675,9 @@ async def dispatch_new_offer_alerts() -> int:
             await send_email(task["to"], task["subject"], task["html"])
         elif task["type"] == "whatsapp":
             await send_whatsapp(task["to"], task["body"], params=task.get("params"))
+        elif task["type"] == "push":
+            async with db_manager.async_session_maker() as push_session:
+                await web_push.send_to_user(push_session, task["user_id"], task["payload"])
 
     if created:
         logger.info("Alertes: %d notification(s) créée(s) (%d envoi(s) externe(s))", created, len(to_send))

@@ -9,24 +9,29 @@ candidat) et le devient à l'approbation admin.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import List, Optional
+import re
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from dependencies.auth import get_admin_user, get_current_user
+from models.analytics import PageView
 from models.auth import User
 from models.job_offers import Job_offers
 from models.job_postings import Job_postings
+from models.job_views import Job_views
 from models.recruiter_profiles import Recruiter_profiles
 from models.user_jobs import User_jobs
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
 from services.auth import AuthService, validate_password_strength
+from services.cv_heuristic import score_profile_job
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +96,9 @@ class CandidateRow(BaseModel):
     status: Optional[str] = None       # to_apply / applied / interview / rejected
     saved: Optional[bool] = None
     cv_analyzed: Optional[bool] = None
+    # Compatibilité profil ↔ offre (0-100), None si le candidat n'a pas de profil exploitable.
+    score: Optional[int] = None
+    strengths: List[str] = []
 
 
 # ---------- Inscription recruteur ----------
@@ -277,8 +285,11 @@ async def job_candidates(
     recruiter: UserResponse = Depends(get_recruiter_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Candidats ayant postulé ou sauvegardé cette offre (recruteur propriétaire)."""
+    """Candidats ayant postulé ou sauvegardé cette offre (recruteur propriétaire),
+    triés par score de compatibilité décroissant (candidatures avant simples sauvegardes
+    à score égal)."""
     await _owned_posting(db, job_id, str(recruiter.id))
+    job = (await db.execute(select(Job_offers).where(Job_offers.id == job_id))).scalars().first()
 
     uj = (await db.execute(select(User_jobs).where(User_jobs.job_id == job_id))).scalars().all()
     # On garde les interactions significatives (candidature OU sauvegarde).
@@ -297,6 +308,7 @@ async def job_candidates(
     for u in uj:
         p = profiles.get(u.user_id)
         usr = users.get(u.user_id)
+        score, strengths = _score_candidate(p, job)
         out.append(CandidateRow(
             user_id=u.user_id,
             name=(p.full_name if p and p.full_name else None) or (usr.name if usr else None),
@@ -306,8 +318,26 @@ async def job_candidates(
             job_title=(p.job_title if p else None),
             status=u.status, saved=u.saved,
             cv_analyzed=(p.cv_analyzed if p else None),
+            score=score, strengths=strengths,
         ))
+    out.sort(key=lambda c: (c.score if c.score is not None else -1, bool((c.status or "").strip())), reverse=True)
     return out
+
+
+def _score_candidate(profile: Optional[User_profiles], job: Optional[Job_offers]) -> tuple:
+    """(score 0-100, points forts) — même moteur déterministe que les alertes candidats."""
+    if not profile or not job or not (profile.skills or profile.sector or profile.job_title):
+        return None, []
+    try:
+        r = score_profile_job(
+            {"skills": profile.skills, "sector": profile.sector, "location": profile.location,
+             "experience_years": profile.experience_years},
+            {"title": job.title, "requirements": job.requirements, "description": job.description,
+             "sector": job.sector, "location": job.location},
+        )
+        return int(r.get("score", 0)), list(r.get("strengths") or [])[:3]
+    except Exception:  # noqa: BLE001 - le tri ne doit jamais casser la liste
+        return None, []
 
 
 # ---------- Modération admin ----------
@@ -416,7 +446,7 @@ class JobContact(BaseModel):
 @router.get("/contact/{job_id}", response_model=JobContact)
 async def job_contact(
     job_id: int,
-    _user: UserResponse = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Numéro WhatsApp du recruteur pour une offre APPROUVÉE (sinon vide).
@@ -431,6 +461,10 @@ async def job_contact(
     )).scalars().first()
     if not posting:
         return JobContact()
+    # La fiche d'une offre recruteur appelle cette route à l'ouverture : c'est notre
+    # compteur de vues dans l'appli (le recruteur qui consulte sa propre offre ne compte pas).
+    if str(current_user.id) != posting.posted_by:
+        await _record_view(db, job_id, str(current_user.id))
     prof = (await db.execute(
         select(Recruiter_profiles).where(Recruiter_profiles.user_id == posting.posted_by)
     )).scalars().first()
@@ -438,4 +472,183 @@ async def job_contact(
     return JobContact(
         company_name=posting.company_name or (prof.company_name if prof else None),
         whatsapp=phone.lstrip("+") or None,
+    )
+
+
+async def _record_view(db: AsyncSession, job_id: int, viewer_id: str) -> None:
+    """Une vue par (offre, candidat, jour). Best-effort : n'empêche jamais la réponse."""
+    day = datetime.now().strftime("%Y-%m-%d")
+    try:
+        exists = (await db.execute(select(Job_views.id).where(
+            Job_views.job_id == job_id, Job_views.viewer_id == viewer_id, Job_views.day == day,
+        ).limit(1))).first()
+        if not exists:
+            db.add(Job_views(job_id=job_id, viewer_id=viewer_id, day=day))
+            await db.commit()
+    except IntegrityError:
+        await db.rollback()  # course entre deux ouvertures simultanées : déjà comptée
+    except Exception as exc:  # noqa: BLE001
+        await db.rollback()
+        logger.warning("Enregistrement de vue échoué (job=%s): %s", job_id, exc)
+
+
+# ---------- « Mon entreprise » (profil recruteur) ----------
+class CompanyProfile(BaseModel):
+    company_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    email: Optional[str] = None            # e-mail du compte (lecture seule)
+    whatsapp: Optional[str] = None         # numéro normalisé, format wa.me (lecture seule)
+
+
+class CompanyUpdate(BaseModel):
+    company_name: Optional[str] = Field(default=None, max_length=120)
+    contact_phone: Optional[str] = Field(default=None, max_length=40)
+    website: Optional[str] = Field(default=None, max_length=200)
+
+
+def _company_out(prof: Optional[Recruiter_profiles], email: Optional[str]) -> CompanyProfile:
+    from services.notifications import _normalize_phone
+
+    phone = (prof.contact_phone or "") if prof else ""
+    return CompanyProfile(
+        company_name=prof.company_name if prof else None,
+        contact_phone=phone or None,
+        website=prof.website if prof else None,
+        email=email,
+        whatsapp=_normalize_phone(phone).lstrip("+") or None,
+    )
+
+
+@router.get("/company", response_model=CompanyProfile)
+async def get_company(
+    recruiter: UserResponse = Depends(get_recruiter_user),
+    db: AsyncSession = Depends(get_db),
+):
+    prof = (await db.execute(
+        select(Recruiter_profiles).where(Recruiter_profiles.user_id == str(recruiter.id))
+    )).scalars().first()
+    return _company_out(prof, recruiter.email)
+
+
+@router.put("/company", response_model=CompanyProfile)
+async def update_company(
+    data: CompanyUpdate,
+    recruiter: UserResponse = Depends(get_recruiter_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Met à jour le profil entreprise. Le numéro WhatsApp sert immédiatement au bouton
+    « Postuler via WhatsApp » de TOUTES les offres du recruteur (lu à la volée)."""
+    from services.notifications import _normalize_phone
+
+    fields = data.model_dump(exclude_unset=True)
+    if "company_name" in fields and not (fields["company_name"] or "").strip():
+        raise HTTPException(status_code=400, detail="Le nom de l'entreprise est requis.")
+    if fields.get("contact_phone"):
+        digits = re.sub(r"\D", "", _normalize_phone(fields["contact_phone"]))
+        if not 8 <= len(digits) <= 15:
+            raise HTTPException(status_code=400, detail="Numéro WhatsApp invalide (indicatif + numéro, ex. +225 07 00 00 00 00).")
+    website = (fields.get("website") or "").strip()
+    if website and not re.match(r"^https?://", website):
+        fields["website"] = "https://" + website
+
+    prof = (await db.execute(
+        select(Recruiter_profiles).where(Recruiter_profiles.user_id == str(recruiter.id))
+    )).scalars().first()
+    if not prof:
+        prof = Recruiter_profiles(user_id=str(recruiter.id))
+        db.add(prof)
+    for key, value in fields.items():
+        setattr(prof, key, (value or "").strip() or None)
+    await db.commit()
+    await db.refresh(prof)
+    return _company_out(prof, recruiter.email)
+
+
+# ---------- Statistiques recruteur ----------
+class JobStats(BaseModel):
+    job_id: int
+    title: str
+    status: str
+    views: int = 0            # vues uniques (appli + page publique)
+    views_7d: int = 0
+    applicants: int = 0
+    saves: int = 0
+
+
+class RecruiterStats(BaseModel):
+    views: int = 0
+    views_7d: int = 0
+    applicants: int = 0
+    saves: int = 0
+    offers_online: int = 0
+    jobs: List[JobStats] = []
+
+
+@router.get("/stats", response_model=RecruiterStats)
+async def recruiter_stats(
+    recruiter: UserResponse = Depends(get_recruiter_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Vues, candidatures et sauvegardes par offre du recruteur.
+
+    Vues = ouvertures de la fiche dans l'appli (1 par candidat et par jour) + visites
+    humaines uniques de la page publique `/offres/{id}` (analytics, robots exclus)."""
+    postings = (await db.execute(
+        select(Job_postings).where(Job_postings.posted_by == str(recruiter.id))
+        .order_by(Job_postings.id.desc())
+    )).scalars().all()
+    if not postings:
+        return RecruiterStats()
+    ids = [p.job_id for p in postings]
+    since = datetime.now() - timedelta(days=7)
+
+    titles = {j.id: j.title for j in (await db.execute(
+        select(Job_offers).where(Job_offers.id.in_(ids))
+    )).scalars().all()}
+
+    views: Dict[int, int] = {}
+    views_7d: Dict[int, int] = {}
+    for jid, created in (await db.execute(
+        select(Job_views.job_id, Job_views.created_at).where(Job_views.job_id.in_(ids))
+    )).all():
+        views[jid] = views.get(jid, 0) + 1
+        if created and created.replace(tzinfo=None) >= since:
+            views_7d[jid] = views_7d.get(jid, 0) + 1
+
+    # Pages publiques : un visiteur unique par jour (visitor_hash tourne chaque jour).
+    path_to_id = {f"/offres/{i}": i for i in ids}
+    seen = set()
+    for path, vh, created in (await db.execute(
+        select(PageView.path, PageView.visitor_hash, PageView.created_at).where(
+            PageView.path.in_(list(path_to_id)), PageView.is_bot == False,  # noqa: E712
+        )
+    )).all():
+        key = (path, vh or f"anon-{created}")
+        if key in seen:
+            continue
+        seen.add(key)
+        jid = path_to_id[path]
+        views[jid] = views.get(jid, 0) + 1
+        if created and created.replace(tzinfo=None) >= since:
+            views_7d[jid] = views_7d.get(jid, 0) + 1
+
+    applicants: Dict[int, int] = {}
+    saves: Dict[int, int] = {}
+    for u in (await db.execute(select(User_jobs).where(User_jobs.job_id.in_(ids)))).scalars().all():
+        if (u.status or "").strip():
+            applicants[u.job_id] = applicants.get(u.job_id, 0) + 1
+        if u.saved:
+            saves[u.job_id] = saves.get(u.job_id, 0) + 1
+
+    rows = [JobStats(
+        job_id=p.job_id, title=titles.get(p.job_id, "(offre supprimée)"), status=p.status,
+        views=views.get(p.job_id, 0), views_7d=views_7d.get(p.job_id, 0),
+        applicants=applicants.get(p.job_id, 0), saves=saves.get(p.job_id, 0),
+    ) for p in postings]
+    return RecruiterStats(
+        views=sum(r.views for r in rows), views_7d=sum(r.views_7d for r in rows),
+        applicants=sum(r.applicants for r in rows), saves=sum(r.saves for r in rows),
+        offers_online=sum(1 for p in postings if p.status == "approved"),
+        jobs=rows,
     )

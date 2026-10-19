@@ -33,6 +33,7 @@ const AdminTrainingCourses = lazy(() => import('./pages/AdminTrainingCourses'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminModeration = lazy(() => import('./pages/AdminModeration'));
 const Recruiter = lazy(() => import('./pages/Recruiter'));
+const RecruiterCompany = lazy(() => import('./pages/RecruiterCompany'));
 const RecruiterSignup = lazy(() => import('./pages/RecruiterSignup'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const Trainings = lazy(() => import('./pages/Trainings'));
@@ -83,6 +84,7 @@ const AppRoutes = () => (
     <Route path="/admin/moderation" element={<ProtectedAdminRoute><AdminModeration /></ProtectedAdminRoute>} />
     <Route path="/recruiter/signup" element={<RecruiterSignup />} />
     <Route path="/recruiter" element={<ProtectedRecruiterRoute><Recruiter /></ProtectedRecruiterRoute>} />
+    <Route path="/recruiter/company" element={<ProtectedRecruiterRoute><RecruiterCompany /></ProtectedRecruiterRoute>} />
     <Route path="/admin/partners" element={<ProtectedAdminRoute><AdminTrainingPartners /></ProtectedAdminRoute>} />
     <Route path="/admin/courses" element={<ProtectedAdminRoute><AdminTrainingCourses /></ProtectedAdminRoute>} />
     <Route path="/admin/achats" element={<ProtectedAdminRoute><AdminCoursePurchases /></ProtectedAdminRoute>} />
