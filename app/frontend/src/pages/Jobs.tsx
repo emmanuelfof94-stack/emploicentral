@@ -16,6 +16,7 @@ import {
 import Markdown from 'markdown-to-jsx';
 import CvTemplateGallery from '../components/CvTemplateGallery';
 import SkillGapBlock from '../components/SkillGapBlock';
+import ApplyWithAiDialog from '../components/ApplyWithAiDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -96,6 +97,8 @@ export default function Jobs() {
   // Coach d'entretien IA
   const runInterviewPrep = useInterviewPrep();
   const [generatingPrep, setGeneratingPrep] = useState(false);
+  // Candidature en 1 clic (IA + validation du candidat)
+  const [applyOpen, setApplyOpen] = useState(false);
   const [prepOpen, setPrepOpen] = useState(false);
   const [prepContent, setPrepContent] = useState('');
   const [prepAi, setPrepAi] = useState(false);
@@ -541,6 +544,18 @@ export default function Jobs() {
                     })()}
                   </div>
 
+                  {/* Postuler avec l'IA : lettre pré-rédigée + CV adapté, envoi direct quand c'est possible */}
+                  {profile?.cv_analyzed && profile?.id ? (
+                    <Button
+                      type="button"
+                      onClick={() => setApplyOpen(true)}
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Postuler avec l'IA
+                    </Button>
+                  ) : null}
+
                   {/* Postuler : redirige vers l'annonce d'origine (source externe) */}
                   {selectedJob.source_url ? (
                     <a
@@ -782,6 +797,19 @@ export default function Jobs() {
             )}
           </DialogContent>
         </Dialog>
+
+        <ApplyWithAiDialog
+          job={selectedJob}
+          open={applyOpen && !!selectedJob}
+          onOpenChange={setApplyOpen}
+          template={cvTemplate}
+          templateLabel={currentTpl?.label}
+          onDownloadCv={handleGenerateCv}
+          downloadingCv={generatingCv}
+          onMarkApplied={(job) => {
+            if (!userJobByJob.get(job.id)?.status) setStatusFor(job, 'applied');
+          }}
+        />
 
         {/* Coach d'entretien : résultat */}
         <Dialog open={prepOpen} onOpenChange={setPrepOpen}>

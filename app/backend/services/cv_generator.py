@@ -196,25 +196,56 @@ def match_profile_to_job(profile_skills: List[str], job: Dict[str, Any]) -> Dict
 # --------------------------------------------------------------------------- #
 # Construction du contenu structuré
 # --------------------------------------------------------------------------- #
+def years_label(years: Any) -> str:
+    """« 1 an » / « 6 ans » (au lieu de « an(s) », qui fait brouillon sur un CV)."""
+    try:
+        n = int(years)
+    except (TypeError, ValueError):
+        return ""
+    return "%d an%s" % (n, "" if n <= 1 else "s")
+
+
+# Mentions d'annonce à retirer du titre visé : « (H/F) », « H/F », « F/H », « M/F »…
+_GENDER_TAG_RE = re.compile(r"\(?\s*\b[HFM]\s*/\s*[HFM]\b\s*\)?", re.I)
+
+
+def clean_job_title(title: Optional[str], location: Optional[str] = None) -> str:
+    """Titre de poste présentable sur un CV : sans « (H/F) », sans la ville de
+    l'annonce en suffixe (« … - Lomé ») ni séparateurs orphelins."""
+    t = _GENDER_TAG_RE.sub(" ", str(title or ""))
+    t = re.sub(r"\(\s*\)", " ", t)
+    city = (location or "").split(",")[0].strip()
+    if city:
+        t = re.sub(r"\s*[-–—|,]\s*" + re.escape(city) + r"\s*$", "", t.strip(), flags=re.I)
+    t = re.sub(r"\s{2,}", " ", t).strip(" -–—|,/")
+    return t.strip()
+
+
+def poste_de(title: str) -> str:
+    """« au poste de Comptable » / « au poste d'Assistant RH » (élision)."""
+    t = (title or "").strip()
+    if t and unicodedata.normalize("NFKD", t[0]).encode("ascii", "ignore").decode().lower() in "aeiouyh":
+        return "au poste d'" + t
+    return "au poste de " + t
+
+
 def _local_summary(profile: Dict[str, Any], job: Dict[str, Any], matched: List[str]) -> str:
     bits: List[str] = []
-    years = profile.get("experience_years")
+    years = years_label(profile.get("experience_years"))
     sector = profile.get("sector")
-    target = job.get("title") or "le poste visé"
-    company = job.get("company")
+    current = (profile.get("job_title") or "").strip()
 
-    head = "Professionnel"
+    # Accroche factuelle : on ne cite ni l'entreprise ni « candidat au poste » —
+    # le CV est envoyé au recruteur, qui sait déjà pour quel poste il le reçoit.
+    head = current or "Professionnel"
     if years:
-        head += f" avec {years} an(s) d'expérience"
+        head += f" avec {years} d'expérience"
     if sector:
         head += f" dans le secteur {sector}"
-    head += f", candidat au poste de {target}"
-    if company:
-        head += f" chez {company}"
     bits.append(head + ".")
 
     if matched:
-        bits.append("Compétences clés alignées avec l'offre : " + ", ".join(matched[:8]) + ".")
+        bits.append("Compétences clés : " + ", ".join(matched[:8]) + ".")
     existing = (profile.get("profile_summary") or "").strip()
     if existing:
         bits.append(existing)
@@ -277,7 +308,7 @@ def build_cv_content(
 
     return {
         "full_name": (profile.get("full_name") or "Candidat").strip(),
-        "target_title": (job.get("title") or profile.get("job_title") or "").strip(),
+        "target_title": clean_job_title(job.get("title") or profile.get("job_title"), job.get("location")),
         "target_company": (job.get("company") or "").strip(),
         "contact": {
             "email": (profile.get("email") or "").strip(),
@@ -493,6 +524,27 @@ def _classify_exp_line(line: str) -> str:
     return "bullet"
 
 
+_PERIOD_RE = re.compile(
+    r"[\(\[]?\s*((?:\w+\.?\s+)?(?:19|20)\d{2}\s*(?:[-–—à/]|au|to)\s*"
+    r"(?:(?:\w+\.?\s+)?(?:19|20)\d{2}|aujourd'?hui|present|présent|ce jour|en cours)"
+    r"|(?:\w+\.?\s+)?(?:19|20)\d{2})\s*[\)\]]?\s*$",
+    re.I,
+)
+
+
+def _split_dated_line(line: str) -> tuple:
+    """Sépare « Poste — Employeur (2021 - 2025) » en (intitulé, période).
+
+    Renvoie ("", line) si la ligne n'est qu'une date (rien d'exploitable avant)."""
+    m = _PERIOD_RE.search(line)
+    if not m:
+        return "", line
+    role = line[:m.start()].strip(" \t-–—|,:")
+    if sum(c.isalpha() for c in role) < 6:
+        return "", line
+    return role, m.group(1).strip()
+
+
 def _bullets(lines: List[str], st) -> List[Any]:
     if not lines:
         return []
@@ -561,31 +613,37 @@ def _f_experience(content, st) -> List[Any]:
     if content.get("sector"):
         exp_bits.append(content["sector"])
     if content.get("experience_years"):
-        exp_bits.append("%s an(s) d'expérience" % content["experience_years"])
+        exp_bits.append("%s d'expérience" % years_label(content["experience_years"]))
     experience_entries = content.get("experience_entries") or []
     if not (exp_bits or experience_entries):
         return []
     out: List[Any] = [_sec("Expérience professionnelle", st)]
-    if exp_bits:
+    if not experience_entries:
+        # Pas de détail exploitable dans le CV source : une ligne de synthèse, mais
+        # jamais de puces « [à compléter] » — ce CV peut partir tel quel chez un recruteur.
         out.append(Paragraph("<b>%s</b>" % _esc(" — ".join(exp_bits)), st["body"]))
-    if experience_entries:
-        buffer: List[str] = []
-        for line in experience_entries:
-            kind = _classify_exp_line(line)
-            if kind == "header":
-                out += _bullets(buffer, st); buffer = []
-                out.append(Paragraph("<b>%s</b>" % _esc(line), st["exp_header"]))
-            elif kind == "date":
-                out += _bullets(buffer, st); buffer = []
-                out.append(Paragraph(_esc(line), st["exp_date"]))
+        return out
+    buffer: List[str] = []
+    for line in experience_entries:
+        kind = _classify_exp_line(line)
+        if kind == "header":
+            out += _bullets(buffer, st); buffer = []
+            out.append(Paragraph("<b>%s</b>" % _esc(line), st["exp_header"]))
+        elif kind == "date":
+            out += _bullets(buffer, st); buffer = []
+            role, period = _split_dated_line(line)
+            if role:
+                # « Poste — Employeur (2021 - 2025) » : c'est l'intitulé du poste, pas
+                # une simple date → en gras, la période en gris à côté.
+                out.append(Paragraph(
+                    "<b>%s</b>%s" % (_esc(role), "  <font color='%s'>%s</font>" % (
+                        colors.toColor(st["exp_date"].textColor).hexval().replace("0x", "#"), _esc(period)) if period else ""),
+                    st["exp_header"]))
             else:
-                buffer.append(line)
-        out += _bullets(buffer, st)
-    else:
-        out += _bullets([
-            "Réalisations et responsabilités en lien avec le poste visé : [à compléter].",
-            "Résultats quantifiés (chiffres, %, délais) : [à compléter].",
-        ], st)
+                out.append(Paragraph(_esc(line), st["exp_date"]))
+        else:
+            buffer.append(line)
+    out += _bullets(buffer, st)
     return out
 
 
@@ -619,7 +677,7 @@ def _band_header(content, tpl, st, width) -> List[Any]:
     cont_st = ParagraphStyle("bcontact", parent=st["contact"], textColor=light)
     inner: List[Any] = [Paragraph(_esc(content["full_name"]), name_st)]
     if content.get("target_title"):
-        inner.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), title_st))
+        inner.append(Paragraph(_esc(content["target_title"]), title_st))
     c = content["contact"]
     contact_line = "  •  ".join(x for x in [c.get("email"), c.get("phone"), c.get("location")] if x)
     if contact_line:
@@ -676,11 +734,10 @@ def _build_sidebar_pdf(content, tpl) -> bytes:
     flow.append(FrameBreak())  # bascule vers la colonne principale
 
     if content.get("target_title"):
-        flow.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
+        flow.append(Paragraph(_esc(content["target_title"]), st["title"]))
     flow += _f_summary(content, st)
     flow += _f_experience(content, st)
     flow += _f_education(content, st)
-    flow += _f_keywords(content, st)
 
     doc.build(flow)
     return buf.getvalue()
@@ -711,19 +768,19 @@ def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
     if layout == "band":
         flow += _band_header(content, tpl, st, doc.width)
         for fn in (_f_summary, _f_skills, _f_experience, _f_education,
-                   _f_certifications, _f_languages, _f_keywords):
+                   _f_certifications, _f_languages):
             flow += fn(content, st)
     else:
         flow.append(Paragraph(_esc(content["full_name"]), st["name"]))
         if content.get("target_title"):
-            flow.append(Paragraph(_esc("Candidature : %s" % content["target_title"]), st["title"]))
+            flow.append(Paragraph(_esc(content["target_title"]), st["title"]))
         c = content["contact"]
         contact_line = "  •  ".join(x for x in [c.get("email"), c.get("phone"), c.get("location")] if x)
         if contact_line:
             flow.append(Paragraph(_esc(contact_line), st["contact"]))
         flow.append(HRFlowable(width="100%", thickness=0.8, color=tpl["rule"], spaceAfter=4))
         for fn in (_f_summary, _f_skills, _f_experience, _f_education,
-                   _f_certifications, _f_languages, _f_keywords):
+                   _f_certifications, _f_languages):
             flow += fn(content, st)
 
     doc.build(flow)
@@ -735,34 +792,36 @@ def build_pdf(content: Dict[str, Any], template: Optional[str] = None) -> bytes:
 # --------------------------------------------------------------------------- #
 def _local_cover_letter_body(profile: Dict[str, Any], job: Dict[str, Any], matched: List[str]) -> List[str]:
     """Corps de lettre (liste de paragraphes) — moteur local sans clé."""
-    title = job.get("title") or "le poste proposé"
+    # Formulations sans accord de genre (« fort de », « convaincu »…) : le genre du
+    # candidat est inconnu et la lettre peut partir telle quelle chez le recruteur.
+    title = clean_job_title(job.get("title"), job.get("location")) or "proposé"
     company = job.get("company") or "votre entreprise"
     years = profile.get("experience_years")
     sector = profile.get("sector")
     current = profile.get("job_title")
 
-    p1 = (
-        f"Actuellement {current} " if current else "Professionnel "
-    ) + (
-        f"fort de {years} an(s) d'expérience" if years else "motivé"
-    ) + (
-        f" dans le secteur {sector}" if sector else ""
-    ) + f", je vous soumets ma candidature au poste de {title} au sein de {company}."
+    intro = []
+    if current:
+        intro.append(f"Actuellement {current}")
+    if years:
+        intro.append(f"avec {years_label(years)} d'expérience" + (f" dans le secteur {sector}" if sector else ""))
+    lead = (", ".join(intro) + ", je") if intro else "Je"
+    p1 = f"{lead} vous soumets ma candidature {poste_de(title)} au sein de {company}."
 
     if matched:
         p2 = (
             "Mon parcours m'a permis de développer des compétences directement utiles à ce poste, "
             f"notamment : {', '.join(matched[:6])}. "
-            "Rigoureux et orienté résultats, je suis convaincu de pouvoir contribuer rapidement à vos objectifs."
+            "Rigueur et sens du résultat font partie de mes atouts : je peux contribuer rapidement à vos objectifs."
         )
     else:
         p2 = (
-            "Rigoureux, autonome et orienté résultats, je suis convaincu que mon profil correspond aux "
-            "attentes de ce poste et que je saurai contribuer rapidement à vos objectifs."
+            "Rigueur, autonomie et sens du résultat font partie de mes atouts. Mon profil correspond aux "
+            "attentes de ce poste et je peux contribuer rapidement à vos objectifs."
         )
 
     p3 = (
-        f"Vivement intéressé par l'opportunité de rejoindre {company}, je me tiens à votre disposition "
+        f"L'opportunité de rejoindre {company} m'intéresse vivement. Je me tiens à votre disposition "
         "pour un entretien afin de vous exposer ma motivation. Dans l'attente de votre retour, je vous prie "
         "d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées."
     )
@@ -783,7 +842,7 @@ def build_cover_letter_content(
             "location": (profile.get("location") or "").strip(),
         },
         "company": (job.get("company") or "").strip(),
-        "target_title": (job.get("title") or "").strip(),
+        "target_title": clean_job_title(job.get("title"), job.get("location")),
         "date_str": date_str,
         "paragraphs": body_override or _local_cover_letter_body(profile, job, matched),
     }
@@ -823,7 +882,7 @@ def build_cover_letter_pdf(content: Dict[str, Any], template: Optional[str] = No
 
     # Objet
     if content.get("target_title"):
-        flow.append(Paragraph("<b>Objet : Candidature au poste de %s</b>" % _esc(content["target_title"]), st["body"]))
+        flow.append(Paragraph("<b>Objet : Candidature %s</b>" % _esc(poste_de(content["target_title"])), st["body"]))
         flow.append(Spacer(1, 8))
 
     # Salutation + corps
@@ -854,7 +913,7 @@ class CvGeneratorService:
             "Rédige une accroche de CV (3 à 4 phrases, en français, à la 1re personne implicite, "
             "sans liste) pour un candidat postulant à cette offre. Mets en avant les compétences "
             "pertinentes et l'adéquation au poste. Réponds UNIQUEMENT par le texte de l'accroche.\n\n"
-            f"POSTE: {job.get('title')} chez {job.get('company')} (secteur {job.get('sector')})\n"
+            f"POSTE: {clean_job_title(job.get('title'), job.get('location'))} chez {job.get('company')} (secteur {job.get('sector')})\n"
             f"EXIGENCES: {job.get('requirements')}\n"
             f"CANDIDAT: {profile.get('job_title')}, {profile.get('experience_years')} an(s) d'expérience, "
             f"formation {profile.get('education')}. Compétences correspondantes: {', '.join(matched)}."
@@ -891,8 +950,10 @@ class CvGeneratorService:
         prompt = (
             "Rédige le CORPS d'une lettre de motivation en français (3 paragraphes, ton professionnel, "
             "1re personne), pour ce candidat et cette offre. N'inclus NI l'en-tête, NI la date, NI 'Madame, Monsieur', "
-            "NI la signature — uniquement les 3 paragraphes séparés par une ligne vide.\n\n"
-            f"POSTE: {job.get('title')} chez {job.get('company')} (secteur {job.get('sector')})\n"
+            "NI la signature — uniquement les 3 paragraphes séparés par une ligne vide. Le genre du candidat "
+            "est inconnu : évite tout accord masculin/féminin (pas de « motivé », « convaincu »… ; "
+            "préfère des tournures neutres). N'invente aucune expérience ni compétence.\n\n"
+            f"POSTE: {clean_job_title(job.get('title'), job.get('location'))} chez {job.get('company')} (secteur {job.get('sector')})\n"
             f"EXIGENCES: {job.get('requirements')}\n"
             f"CANDIDAT: {profile.get('job_title')}, {profile.get('experience_years')} an(s) d'expérience. "
             f"Compétences correspondantes: {', '.join(matched)}."
