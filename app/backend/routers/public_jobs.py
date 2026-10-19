@@ -24,7 +24,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -226,7 +226,9 @@ async def list_public_jobs(
         like = f"%{q.strip()}%"
         stmt = stmt.where(or_(Job_offers.title.ilike(like), Job_offers.company.ilike(like),
                               Job_offers.location.ilike(like), Job_offers.sector.ilike(like)))
-    rows = (await db.execute(stmt.order_by(Job_offers.posted_date.desc(), Job_offers.id.desc()))).scalars().all()
+    # Date de publication, à défaut date d'entrée en base (sinon Postgres trie les NULL en tête).
+    recency = func.coalesce(Job_offers.posted_date, func.substr(cast(Job_offers.created_at, String), 1, 10))
+    rows = (await db.execute(stmt.order_by(recency.desc(), Job_offers.id.desc()))).scalars().all()
     return PublicJobList(items=[_to_public(j) for j in rows[offset:offset + limit]], total=len(rows))
 
 
