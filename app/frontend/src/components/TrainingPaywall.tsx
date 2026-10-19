@@ -10,13 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { CheckCircle2, Clock, Loader2, Lock, Smartphone, Infinity as InfinityIcon } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, Lock, ShieldCheck, Smartphone, Infinity as InfinityIcon } from 'lucide-react';
 import { useTrainingQuota, useTrainingAccessActions } from '../hooks/useApi';
+import { startWaveCheckout } from '../hooks/usePayments';
+
+// Produit « accès illimité » (backend services/training_quota.UNLIMITED_SLUG).
+const UNLIMITED_SLUG = 'formations-illimite';
 
 /**
  * Modale de déblocage « accès illimité aux formations ».
  * S'affiche quand le candidat a épuisé ses 5 accès gratuits (parcours IA +
- * déblocages du catalogue). Paiement mobile money déclaré → validé par un admin.
+ * déblocages du catalogue). Paiement Wave automatique si configuré côté serveur,
+ * sinon (ou en complément) mobile money déclaré → validé par un admin.
  */
 export default function TrainingPaywall({
   open,
@@ -29,8 +34,21 @@ export default function TrainingPaywall({
   const { purchaseUnlimited } = useTrainingAccessActions();
   const [ref, setRef] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [startingWave, setStartingWave] = useState(false);
 
   const pending = quota?.purchase_status === 'pending';
+
+  const onPayWithWave = async () => {
+    setStartingWave(true);
+    try {
+      // Redirection vers Wave (appli ou page de paiement) ; retour sur /paiement/retour.
+      window.location.assign(await startWaveCheckout(UNLIMITED_SLUG));
+    } catch (e) {
+      const anyE = e as { response?: { data?: { detail?: string } }; data?: { detail?: string } };
+      toast.error(anyE?.response?.data?.detail || anyE?.data?.detail || 'Paiement Wave indisponible. Réessayez.');
+      setStartingWave(false);
+    }
+  };
 
   const onSubmit = async () => {
     if (!ref.trim()) {
@@ -83,6 +101,32 @@ export default function TrainingPaywall({
           </div>
         ) : (
           <>
+            {quota?.wave_enabled && (
+              <>
+                <Button
+                  onClick={onPayWithWave}
+                  disabled={startingWave}
+                  className="w-full bg-[#1DC8FF] hover:bg-[#12b5ea] text-slate-900 font-semibold"
+                >
+                  {startingWave ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ouverture de Wave…
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="h-4 w-4 mr-2" /> Payer {quota?.price} avec Wave
+                    </>
+                  )}
+                </Button>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Accès débloqué automatiquement dès le paiement.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" /> ou paiement manuel (Orange Money…)
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             <div className="rounded-lg bg-muted p-4 space-y-2">
               <p className="text-sm font-medium flex items-center gap-2">
                 <Smartphone className="h-4 w-4" /> Comment payer
