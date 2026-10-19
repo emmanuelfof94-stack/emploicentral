@@ -44,6 +44,7 @@ désactivées tant que non renseignées) :
 | `APP_AI_BASE_URL` / `APP_AI_KEY` | Analyse de CV + score de compatibilité (IA) |
 | `OSS_SERVICE_URL` / `OSS_API_KEY` | Upload de CV (stockage objet) |
 | `STRIPE_SECRET_KEY` | Paiements |
+| `SENTRY_DSN` (+ `SENTRY_TRACES_SAMPLE_RATE`, défaut 0.05) | Suivi des erreurs backend (Sentry) — inactif si vide |
 
 > Sans OIDC, la navigation publique (landing, liste d'offres) fonctionne mais
 > la connexion et les pages protégées (Dashboard, Profile, Alerts) ne sont pas accessibles.
@@ -191,6 +192,24 @@ les offres actives aux alertes (`alert_preferences`) et notifie les nouvelles co
 - **Frontend** : page Alertes → toggles **Email** / **WhatsApp** (`notify_email`/`notify_whatsapp`) ;
   badge de nouvelles correspondances déjà géré par `useAlertMatches`.
 - Config dans `.env` (placeholders commentés, canaux inactifs tant que vides).
+
+## Tests & intégration continue
+- **Backend** : suite pytest dans `app/backend/tests/` (base SQLite temporaire recréée à
+  chaque test, aucun appel réseau : SMTP/WhatsApp/IA neutralisés, `socket.connect` bloqué).
+  ```bash
+  cd app/backend
+  ../.venv/bin/python -m pytest -q
+  ```
+  Les tests marqués `xfail` documentent des bugs connus non encore corrigés.
+- **CI** : `.github/workflows/ci.yml` lance à chaque push / PR les tests backend (Python 3.11,
+  comme l'image Render), le typecheck (`tsc --noEmit -p tsconfig.app.json`) et le lint du front.
+
+## Suivi des erreurs (Sentry) — désactivé par défaut
+`core/observability.py` initialise `sentry-sdk` (intégration FastAPI) **uniquement si
+`SENTRY_DSN` est défini**. `environment` = `ENVIRONMENT`, `send_default_pii=False`, corps de
+requête et variables locales jamais envoyés, traces à 5 % (`SENTRY_TRACES_SAMPLE_RATE`).
+Pour l'activer : créer un projet Python/FastAPI sur sentry.io, copier son DSN dans la
+variable `SENTRY_DSN` du service Render (jamais dans le dépôt).
 
 ## Structure
 ```
