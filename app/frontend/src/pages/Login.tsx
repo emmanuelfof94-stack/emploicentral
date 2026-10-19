@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,10 @@ type Mode = 'login' | 'register';
 export default function Login() {
   const { user, loading, refreshAuth } = useAuth();
   const navigate = useNavigate();
+  // Retour après connexion (ex. depuis une offre publique). Chemin interne uniquement.
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get('next') || '';
+  const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/dashboard';
 
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
@@ -23,12 +27,12 @@ export default function Login() {
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already authenticated → go to dashboard
+  // Already authenticated → go to dashboard (or `next`)
   useEffect(() => {
     if (!loading && user) {
-      navigate('/dashboard', { replace: true });
+      navigate(next, { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, user, navigate, next]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +82,7 @@ export default function Login() {
       // the JWT from localStorage only once, at creation time. Without a reload the
       // already-created client keeps making requests with no Authorization header,
       // so authenticated calls (e.g. CV upload) fail with 401.
-      window.location.assign('/dashboard');
+      window.location.assign(next);
     } catch {
       toast.error('Impossible de contacter le serveur');
     } finally {

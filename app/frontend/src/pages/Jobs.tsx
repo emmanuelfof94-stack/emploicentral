@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import {
   useJobs,
@@ -35,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, CalendarDays, Bookmark, ExternalLink, Palette, MessageCircle, Mic, Sparkles } from 'lucide-react';
 import { waShareUrl, waApplyUrl } from '../lib/whatsapp';
+import { expiryInfo, publishedInfo } from '../lib/jobDates';
 
 interface ScoreItem {
   job_id: number;
@@ -48,56 +50,6 @@ function scoreBg(score: number) {
   if (score >= 75) return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
   if (score >= 50) return 'bg-blue-50 text-blue-700 ring-blue-200';
   return 'bg-amber-50 text-amber-700 ring-amber-200';
-}
-
-// Human-readable expiry label. `urgent` within 7 days, `soon` within 3 days.
-function expiryInfo(
-  validThrough?: string
-): { label: string; urgent: boolean; soon: boolean; days: number } | null {
-  if (!validThrough) return null;
-  const d = new Date(`${validThrough}T00:00:00`);
-  if (isNaN(d.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (days < 0) return null; // expired offers are filtered out upstream
-  const soon = days <= 3;
-  if (days === 0) return { label: "Expire aujourd'hui", urgent: true, soon, days };
-  if (days === 1) return { label: 'Expire demain', urgent: true, soon, days };
-  if (days <= 7) return { label: `Expire dans ${days} jours`, urgent: true, soon, days };
-  const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  return { label: `Expire le ${dateStr}`, urgent: false, soon: false, days };
-}
-
-// Human-readable "published" label. Prefer the source's posted_date when it's a
-// sane value, otherwise fall back to created_at (when the offer entered our DB),
-// because some sources emit bogus dates (epoch-ish or in the future).
-function publishedInfo(postedDate?: string, createdAt?: string): { label: string } | null {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const minValid = new Date(today);
-  minValid.setFullYear(minValid.getFullYear() - 1); // ignore offers "published" > 1 an ago
-
-  const parse = (s?: string) => {
-    if (!s) return null;
-    const d = new Date(s.length <= 10 ? `${s}T00:00:00` : s);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  let d = parse(postedDate);
-  if (!d || d.getTime() > today.getTime() || d.getTime() < minValid.getTime()) {
-    d = parse(createdAt); // posted_date absent / futur / trop vieux → repli
-  }
-  if (!d) return null;
-
-  const day = new Date(d);
-  day.setHours(0, 0, 0, 0);
-  const days = Math.round((today.getTime() - day.getTime()) / 86400000);
-  if (days <= 0) return { label: "Publié aujourd'hui" };
-  if (days === 1) return { label: 'Publié hier' };
-  if (days <= 30) return { label: `Publié il y a ${days} jours` };
-  const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  return { label: `Publié le ${dateStr}` };
 }
 
 export default function Jobs() {
@@ -261,6 +213,15 @@ export default function Jobs() {
   const [sortBy, setSortBy] = useState<'score' | 'recent'>('score');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   // Offres publiées par un recruteur (sans annonce source) : contact WhatsApp direct.
+  // Lien profond `/jobs?job=<id>` (depuis une page d'offre publique) : ouvre l'offre.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkId = Number(searchParams.get('job')) || 0;
+  useEffect(() => {
+    if (!deepLinkId || loadingJobs) return;
+    const target = allJobs.find((j) => j.id === deepLinkId);
+    if (target) setSelectedJob(target);
+    setSearchParams({}, { replace: true });
+  }, [deepLinkId, loadingJobs, allJobs, setSearchParams]);
   const { data: jobContact } = useJobContact(selectedJob?.id, !!selectedJob && !selectedJob.source_url);
 
   // Map job_id → score detail (computed once from the cached batch result)
@@ -659,7 +620,7 @@ export default function Jobs() {
                       href={waShareUrl(
                         `${selectedJob.title} chez ${selectedJob.company}` +
                           (selectedJob.location ? ` — ${selectedJob.location}` : '') +
-                          `\n${selectedJob.source_url || `${window.location.origin}/jobs`}`
+                          `\n${window.location.origin}/offres/${selectedJob.id}`
                       )}
                       target="_blank"
                       rel="noopener noreferrer"

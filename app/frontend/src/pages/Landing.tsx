@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import BrandLogo from '../components/BrandLogo';
-import ThemeToggle from '../components/ThemeToggle';
+import PublicHeader from '../components/PublicHeader';
 import {
   ArrowRight,
   FileSearch,
@@ -64,21 +63,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen app-surface">
-      {/* Header */}
-      <header className="border-b border-slate-200/70 bg-white/70 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <BrandLogo size="md" tagline />
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button onClick={handleGetStarted} variant="ghost" size="sm" className="hidden sm:inline-flex">
-              Connexion
-            </Button>
-            <Button onClick={handleGetStarted} size="sm" className="bg-brand-gradient hover:opacity-95">
-              S&apos;inscrire
-            </Button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -108,8 +93,8 @@ export default function Landing() {
                   Commencer gratuitement
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-                <Button size="lg" variant="outline" onClick={handleGetStarted}>
-                  J&apos;ai déjà un compte
+                <Button size="lg" variant="outline" onClick={() => navigate('/offres')}>
+                  Voir les offres
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 pt-2">

@@ -19,6 +19,8 @@ import ProtectedRecruiterRoute from './components/ProtectedRecruiterRoute';
 // reste — notamment recharts, qui n'est utilisé que par AdminAnalytics.
 const Index = lazy(() => import('./pages/Index'));
 const Login = lazy(() => import('./pages/Login'));
+const PublicJobs = lazy(() => import('./pages/PublicJobs'));
+const PublicJob = lazy(() => import('./pages/PublicJob'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Jobs = lazy(() => import('./pages/Jobs'));
@@ -64,6 +66,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<Login />} />
+    <Route path="/offres" element={<PublicJobs />} />
+    <Route path="/offres/:id" element={<PublicJob />} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />

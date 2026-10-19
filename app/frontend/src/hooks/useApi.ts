@@ -983,3 +983,36 @@ export function useInvalidate() {
 }
 
 export { useMutation };
+
+// ---- Offres publiques (sans compte, SEO / Google for Jobs) ----
+export interface PublicJob extends Job {
+  expired: boolean;
+}
+
+async function publicGet<T>(url: string): Promise<T> {
+  // fetch direct : ces endpoints sont publics, aucun JWT à joindre.
+  const res = await fetch(url);
+  if (res.status === 404) throw Object.assign(new Error('not_found'), { status: 404 });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+export function usePublicJobs(q: string, limit: number) {
+  return useQuery({
+    queryKey: ['public_jobs', q, limit],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      publicGet<{ items: PublicJob[]; total: number }>(
+        `/api/v1/public/jobs?limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`
+      ),
+  });
+}
+
+export function usePublicJob(id?: number) {
+  return useQuery({
+    queryKey: ['public_job', id],
+    enabled: !!id,
+    retry: (count, err) => (err as { status?: number }).status !== 404 && count < 2,
+    queryFn: () => publicGet<PublicJob>(`/api/v1/public/jobs/${id}`),
+  });
+}
