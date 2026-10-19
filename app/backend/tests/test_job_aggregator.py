@@ -94,15 +94,19 @@ def test_infer_employer_from_title(title, expected):
     assert agg.infer_employer(title, None) == expected
 
 
-@pytest.mark.xfail(reason="BUG: _LEADING_ARTICLE_RE retire « L' » / « La » même quand il fait partie "
-                          "du nom de marque (« L'Oréal recrute » → « Oréal »).", strict=True)
-def test_infer_employer_keeps_article_that_is_part_of_brand():
-    assert agg.infer_employer("L'Oréal recrute un chef de produit", None) == "L'Oréal"
+@pytest.mark.parametrize("title,expected", [
+    ("L'Oréal recrute un chef de produit", "L'Oréal"),
+    ("La Poste recrute un facteur", "La Poste"),
+    ("Le Méridien recrute un réceptionniste", "Le Méridien"),
+    ("La BAD recrute 06 consultants", "BAD"),
+    ("La Banque mondiale recrute un spécialiste", "Banque mondiale"),
+    ("L'Ambassade des Etats-Unis recrute un(e) assistant(e)", "Ambassade des Etats-Unis"),
+])
+def test_infer_employer_leading_article(title, expected):
+    # Article retiré devant un nom d'institution ou un sigle, gardé s'il fait partie de la marque.
+    assert agg.infer_employer(title, None) == expected
 
 
-@pytest.mark.xfail(reason="BUG: _DESC_EMPLOYER_RE n'est pas ancrée en tête de description : "
-                          "« Présentation de l'entreprise : Nous sommes… » est pris pour l'employeur.",
-                   strict=True)
 def test_infer_employer_ignores_entreprise_label_inside_prose():
     desc = "<p>Présentation de l'entreprise : Nous sommes un cabinet de conseil</p>"
     assert agg.infer_employer("Consultant junior", desc) is None

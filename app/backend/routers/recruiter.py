@@ -26,7 +26,7 @@ from models.recruiter_profiles import Recruiter_profiles
 from models.user_jobs import User_jobs
 from models.user_profiles import User_profiles
 from schemas.auth import UserResponse
-from services.auth import AuthService
+from services.auth import AuthService, validate_password_strength
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,11 @@ class CandidateRow(BaseModel):
 async def register_recruiter(payload: RecruiterRegisterRequest, db: AsyncSession = Depends(get_db)):
     """Crée un compte recruteur (rôle 'recruiter' + profil entreprise) et renvoie un token."""
     auth_service = AuthService(db)
+    # Mot de passe trop faible → 400 ; 409 reste réservé à « email déjà utilisé ».
+    try:
+        validate_password_strength(payload.password, payload.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     try:
         user = await auth_service.register_local_user(
             email=payload.email, password=payload.password, name=payload.name

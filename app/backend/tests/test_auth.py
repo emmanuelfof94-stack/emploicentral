@@ -59,11 +59,10 @@ async def test_register_normalizes_email_and_rejects_duplicate(client):
 
 
 async def test_register_rejects_weak_password(client):
-    # Trop courant : passe la validation Pydantic (>= 8) mais refusé par la politique.
-    # NB : la ValueError de la politique est mappée en 409 par le routeur (même
-    # `except` que le doublon), alors que la docstring du service annonce un 400.
+    # Trop courant : passe la validation Pydantic (>= 8) mais refusé par la politique
+    # → 400 (409 est réservé à « email déjà utilisé »).
     r = await _register(client, password="azerty123")
-    assert r.status_code == 409
+    assert r.status_code == 400
     assert "courant" in r.json()["detail"]
     # Trop court : refusé dès la validation du schéma.
     assert (await _register(client, email="b@emploi-tests.ci", password="abc")).status_code == 422

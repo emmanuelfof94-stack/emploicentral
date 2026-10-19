@@ -652,15 +652,28 @@ def _sane_posted_date(raw: Optional[str]) -> Optional[str]:
 _OPERATOR_COMPANIES = {"e-faso"}
 CONFIDENTIAL_EMPLOYER = "Employeur confidentiel"
 
-# « Entreprise : LEADWAY ASSURANCE » en tête de description (HTML ou texte aplati,
-# où l'étiquette suivante est collée : « …ASSURANCELieu : Abidjan »).
+# « Entreprise : LEADWAY ASSURANCE » en TÊTE de description (HTML ou texte aplati,
+# où l'étiquette suivante est collée : « …ASSURANCELieu : Abidjan »). Ancrée au
+# début (balises ouvrantes tolérées) : « Présentation de l'entreprise : Nous… »
+# plus loin dans le texte n'est pas un nom d'employeur.
 _DESC_EMPLOYER_RE = re.compile(
-    r"Entreprise\s*:\s*(?:</strong>)?\s*(.+?)(?=<|Lieu\s*:|Type de contrat\s*:|Date limite\s*:|\n|$)",
+    r"^\s*(?:<[^>]+>\s*)*Entreprise\s*:\s*(?:</strong>)?\s*(.+?)(?=<|Lieu\s*:|Type de contrat\s*:|Date limite\s*:|\n|$)",
     re.I,
 )
 # « Wave recrute un… », « Les Écoles Maarif recrutent… »
 _TITLE_EMPLOYER_RE = re.compile(r"^(.+?)\s+recrute(?:nt)?\b", re.I)
-_LEADING_ARTICLE_RE = re.compile(r"^(?:la|le|les)\s+|^l['’]\s*", re.I)
+# Article retiré seulement devant un nom commun d'institution ou un sigle
+# (« La BAD », « L'Ambassade de… ») ; conservé quand il fait partie de la marque
+# (« L'Oréal », « La Poste », « Le Méridien »).
+_LEADING_ARTICLE_RE = re.compile(
+    r"^(?i:la|le|les)\s+(?=(?:[A-ZÉÈ]{2,}\b|(?i:banque|ambassade|fondation|société|entreprise|agence|"
+    r"organisation|école|écoles|groupe|groupement|direction|centre|chambre|compagnie|caisse|"
+    r"mairie|union|cabinet|clinique|polyclinique|fédération|association|commission|mission|"
+    r"délégation|communauté|autorité|coopérative|ong|ministère|institut|université|office|"
+    r"programme|fonds|conseil|haute|nouvelle)\b))"
+    r"|^(?i:l)['’]\s*(?=(?i:ambassade|agence|organisation|école|union|association|institut|université|"
+    r"office|ong|entreprise|autorité)\b)",
+)
 
 
 _CONFIDENTIAL_NAMES = {"confidential company", "confidential", "confidentiel", "entreprise confidentielle"}

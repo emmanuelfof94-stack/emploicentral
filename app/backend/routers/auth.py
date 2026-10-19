@@ -32,7 +32,7 @@ from schemas.auth import (
     UserResponse,
 )
 from services import rate_limit
-from services.auth import AuthService
+from services.auth import AuthService, validate_password_strength
 from services.login_tracking import client_ip, client_user_agent, record_login
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -346,6 +346,11 @@ async def register_local(
 ):
     """Register a new local (email/password) account and return an app token."""
     auth_service = AuthService(db)
+    # Mot de passe trop faible → 400 ; 409 reste réservé à « email déjà utilisé ».
+    try:
+        validate_password_strength(payload.password, payload.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     try:
         user = await auth_service.register_local_user(
             email=payload.email, password=payload.password, name=payload.name
