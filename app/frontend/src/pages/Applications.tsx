@@ -5,6 +5,7 @@ import {
   useAllJobs,
   useUserJobs,
   useUserJobActions,
+  useMyApplications,
   type Job,
   type UserJob,
 } from '../hooks/useApi';
@@ -17,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Bookmark, Building2, MapPin, Banknote, Briefcase, X, ArrowRight } from 'lucide-react';
+import { Bookmark, Building2, MapPin, Banknote, Briefcase, X, ArrowRight, Send } from 'lucide-react';
 
 const STATUS_COLUMNS: { key: string; label: string; color: string }[] = [
   { key: 'to_apply', label: 'À postuler', color: 'bg-amber-50 text-amber-700 ring-amber-200' },
@@ -30,6 +31,16 @@ export default function Applications() {
   const { data: allJobs = [] } = useAllJobs();
   const { data: userJobs = [] } = useUserJobs();
   const { upsert, remove } = useUserJobActions();
+  const { data: sentApps = [] } = useMyApplications();
+
+  // Candidatures réellement envoyées par EmploiCentral (« Postuler avec l'IA »).
+  const sentAtByJob = useMemo(() => {
+    const m = new Map<number, string>();
+    sentApps.forEach((a) => {
+      if (a.status === 'sent' && a.created_at && !m.has(a.job_id)) m.set(a.job_id, a.created_at);
+    });
+    return m;
+  }, [sentApps]);
 
   const jobById = useMemo(() => {
     const m = new Map<number, Job>();
@@ -94,6 +105,12 @@ export default function Applications() {
                 </span>
               )}
               {!job && <span className="italic">Offre expirée ou retirée</span>}
+              {sentAtByJob.has(uj.job_id) && (
+                <span className="flex items-center gap-1 text-violet-700">
+                  <Send className="w-3 h-3" /> Envoyée par EmploiCentral le{' '}
+                  {new Date(sentAtByJob.get(uj.job_id) as string).toLocaleDateString('fr-FR')}
+                </span>
+              )}
             </div>
           </div>
           {uj.saved && (
