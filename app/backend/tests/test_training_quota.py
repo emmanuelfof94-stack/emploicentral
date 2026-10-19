@@ -156,6 +156,13 @@ async def test_quota_endpoint(client, candidate, quota_on):
     assert body["remaining"] == tq.FREE_ACCESS_LIMIT
     assert body["purchase_status"] == "none"
     assert body["payment_number"]
+    assert body["wave_enabled"] is False  # pas de WAVE_API_KEY en test
+
+
+async def test_quota_endpoint_exposes_wave(client, candidate, quota_on, monkeypatch):
+    monkeypatch.setenv("WAVE_API_KEY", "wave_ci_prod_test")
+    r = await client.get(QUOTA_URL, headers=candidate["headers"])
+    assert r.json()["wave_enabled"] is True
 
 
 async def test_purchase_request_flow_until_admin_validation(client, db_session, candidate, admin, quota_on):

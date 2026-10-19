@@ -923,6 +923,7 @@ export interface TrainingQuota {
   purchase_status: 'none' | 'pending' | 'paid' | 'rejected';
   price: string;
   payment_number: string;
+  wave_enabled?: boolean; // paiement automatique Wave disponible (clé configurée côté serveur)
 }
 
 /** true si l'erreur est un 402 « quota épuisé » (déclenche l'affichage du paywall). */

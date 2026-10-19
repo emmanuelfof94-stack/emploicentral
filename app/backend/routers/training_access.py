@@ -26,7 +26,7 @@ from models.auth import User
 from models.course_purchases import Course_purchases
 from models.notifications import Notification
 from schemas.auth import UserResponse
-from services import training_quota
+from services import training_quota, wave
 from services.notifications import send_email
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ class QuotaResponse(BaseModel):
     purchase_status: str              # none / pending / paid / rejected
     price: str
     payment_number: str
+    wave_enabled: bool = False        # paiement automatique Wave disponible (sinon flux manuel seul)
 
 
 class PurchaseRequest(BaseModel):
@@ -58,6 +59,7 @@ async def _quota_response(db: AsyncSession, user_id: str) -> QuotaResponse:
         enabled=q["enabled"], limit=q["limit"], used=q["used"], remaining=q["remaining"],
         unlimited=q["unlimited"], purchase_status=q["purchase_status"],
         price=q["price"], payment_number=PAYMENT_NUMBER,
+        wave_enabled=wave.wave_enabled(),
     )
 
 
