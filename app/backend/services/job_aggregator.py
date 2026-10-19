@@ -38,6 +38,7 @@ import httpx
 
 from core.database import db_manager
 from services.job_offers import Job_offersService
+from models.app_markers import App_markers  # noqa: F401 — enregistre la table pour create_all
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +313,8 @@ _SECTOR_RULES = [
         "sap", "erp", "cloud", "système d'information", "système", "systems", "helpdesk",
         "support it", "qa ", "quality assurance", "ui", "ux", "machine learning", "ia ", "ai ",
         "intelligence artificielle", "digital", "numérique", "python", "java", ".net", "php",
-        "blockchain", "crypto", "rust",
+        "blockchain", "crypto", "rust", "engineer", "engineering", "vulnerab", "pentest",
+        "sécurité informatique", "kernel", "linux", "robotics", "robotique",
     ]),
     ("Comptabilité / Audit", [
         "comptab", "audit", "fiscal", "contrôle de gestion", "contrôleur de gestion", "trésor",
@@ -327,23 +329,27 @@ _SECTOR_RULES = [
         "marketing", "communication", "community manager", "seo", "publicité", "média",
         "contenu", "content", "brand", "marque", "graphi", "motion", "designer", "rédact",
         "journalis", "éditorial", "relations presse", "social media", "vidéaste", "cadreur",
-        "monteur vidéo", "photograph", "événementiel", "events",
+        "monteur vidéo", "photograph", "événementiel", "events", "video", "vidéo", "radio",
+        "audiovisuel", "programmateur musical", "animateur radio", "tv ",
     ]),
     ("Logistique / Transport", [
         "logisti", "supply chain", "transport", "approvisionnement", "fret", "douane", "transit",
         "import-export", "magasinier", "chauffeur", "driver", "cargo", "achat", "acheteur",
         "procurement", "flotte", "entrepôt", "warehouse", "shipping", "maritime", "portuaire",
         "conducteur routier", "conducteurs routiers", "routier", "livreu", "coursier",
+        "stock", "inventaire",
     ]),
     ("BTP / Construction", [
         "btp", "construction", "génie civil", "chantier", "bâtiment", "immobilier", "architect",
-        "travaux", "topograph", "conducteur de travaux", "civil engineer", "maçon", "plombier",
+        "travaux", "topograph", "conducteur de travaux", "civil engineer", "civil", "maçon", "plombier",
+        "métré", "metreur", "métreur", "hydraulique", "ouvrages", "dessinateur",
     ]),
     ("Commerce / Vente", [
         "commercia", "vente", "vendeu", "business development", "business developer",
         "négociat", "télévente", "sales", "caissi", "account manager", "key account",
         "merchandis", "bizdev", "téléconseiller", "call center", "centre d'appels", "customer service",
         "service client", "relation client", "agent commercial", "boutique", "retail",
+        "closer", "closeur", "growth", "customer success",
     ]),
     ("Ressources Humaines", [
         "ressources humaines", "rh ", "recrutement", "recruteu", "recruiter", "paie",
@@ -367,38 +373,52 @@ _SECTOR_RULES = [
     ]),
     ("Énergie / Mines", [
         "énergie", "energy", "électricité", "pétrol", "petroleum", "gaz", "oil", "mine",
-        "minier", "mining", "solaire", "solar", "électrici", "hse", "qhse",
+        "minier", "mining", "solaire", "solar", "hse", "qhse",
     ]),
     ("Industrie", [
         "industri", "production", "usine", "manufactur", "maintenance", "mécani", "électromécani",
         "ingénierie", "qualité", "chimie", "métallurgie", "textile", "plasturg", "technicien",
+        "frigoriste", "froid", "climatisation", "tôlerie", "tôlier", "carrosserie", "carrossier",
+        "soudeu", "électricien", "électromécanicien", "cordiste",
         "operator", "opérateur",
     ]),
     ("Hôtellerie / Tourisme", [
         "hôtel", "hotel", "restaura", "tourisme", "cuisin", "chef cuisinier", "serveu",
-        "barman", "réception", "receptionist", "housekeep", "voyage", "travel",
+        "barman", "réception", "receptionist", "housekeep", "agence de voyage", "agent de voyage",
+        "f&b", "food and beverage",
     ]),
     ("Administration / Secrétariat", [
         "assistant", "assistante", "secrétai", "secretary", "administrati", "admin ",
         "office manager", "accueil", "archiv", "standardiste", "gestionnaire de bureau",
-        "saisie", "services généraux", "moyens généraux",
+        "saisie", "services généraux", "moyens généraux", "consulaire", "consulat", "protocole",
     ]),
     ("Humanitaire / ONG", [
         "humanitaire", "ong", "ngo", "unicef", "pnud", "undp", "unfpa", "programme alimentaire",
         "msf", "médecins sans frontières", "croix-rouge", "suivi-évaluation", "suivi, évaluation",
-        "monitoring and evaluation", "développement communautaire",
+        "monitoring and evaluation", "développement communautaire", "suivi et évaluation",
+        "suivi et d'évaluation",
     ]),
     ("Sécurité / Gardiennage", ["sécurité privée", "gardien", "vigile", "agent de sécurité", "security guard"]),
     ("Direction / Management", [
         "directeur", "directrice", "director", "country manager", "general manager",
         "chef de projet", "project manager", "manager", "responsable", "coordinat", "gérant",
+        "project officer", "chargé de projet",
+        "chargé(e) de projet", "head of",
     ]),
 ]
 
-# Compilé une fois : (libellé, [motifs « début de mot »]).
+# Mots-clés génériques (présents dans beaucoup de métiers) : demi-poids, pour qu'un
+# mot précis l'emporte (« Mining Engineer » → Mines, pas Informatique).
+_GENERIC_KEYWORDS = {
+    "engineer", "engineering", "consultant", "manager", "responsable", "technicien",
+    "assistant", "assistante", "superviseu", "supervisor", "coordinat", "digital", "système",
+}
+
+# Compilé une fois : (libellé, [(motif « début de mot », poids)]).
 _SECTOR_PATTERNS = [
-    (label, [re.compile(r"(?<![\w])" + re.escape(k.strip())
-                        + (r"(?![\w])" if k.endswith(" ") or len(k.strip()) <= 3 else ""), re.I)
+    (label, [(re.compile(r"(?<![\w])" + re.escape(k.strip())
+                         + (r"(?![\w])" if k.endswith(" ") or len(k.strip()) <= 3 else ""), re.I),
+              0.5 if k.strip() in _GENERIC_KEYWORDS else 1.0)
              for k in keys])
     for label, keys in _SECTOR_RULES
 ]
@@ -496,7 +516,7 @@ def _sector_scores(text: str, weight: float, scores: Dict[str, float]) -> None:
     # « Business Developer » est un poste commercial, pas de développeur.
     text = _BIZDEV_RE.sub("bizdev", text)
     for label, patterns in _SECTOR_PATTERNS:
-        hits = sum(1 for pat in patterns if pat.search(text))
+        hits = sum(w for pat, w in patterns if pat.search(text))
         if hits:
             scores[label] = scores.get(label, 0.0) + weight * hits
 
@@ -1172,12 +1192,33 @@ _LEGACY_CANONICAL_SECTORS = {
 }
 _sectors_reclassified = False
 _CANONICAL_SECTORS = [label for label, _ in _SECTOR_RULES] + ["Autres"]
+# À incrémenter à chaque modification de _SECTOR_RULES : déclenche UN reclassement
+# complet (une seule fois, mémorisé dans app_markers) au prochain démarrage.
+SECTOR_RULES_VERSION = "2026-10-19c"
+_SECTOR_MARKER_KEY = "sector_rules_version"
+
+
+async def _get_marker(session, key: str) -> Optional[str]:
+    row = await session.get(App_markers, key)
+    return row.value if row else None
+
+
+async def _set_marker(session, key: str, value: str) -> None:
+    row = await session.get(App_markers, key)
+    if row:
+        row.value = value
+    else:
+        session.add(App_markers(key=key, value=value))
 
 
 async def reclassify_sectors() -> int:
-    """Reclasse une fois par processus les offres AGRÉGÉES avec le classement actuel.
+    """Reclasse les offres (hors offres de recruteurs, dont le secteur est choisi par eux).
 
-    Les offres de recruteurs (secteur choisi par eux) ne sont jamais touchées.
+    - Nouvelle version des règles (`SECTOR_RULES_VERSION` ≠ marqueur en base) : TOUTES
+      les offres, une seule fois, puis le marqueur est mis à jour.
+    - Sinon : seulement les offres sans secteur canonique (quelques-unes au plus).
+    Le calcul (regex) tourne dans un thread : reclasser ~1 000 offres dans la boucle
+    asyncio bloquait le serveur ~1 min sur l'offre gratuite → Render « wake error ».
     """
     global _sectors_reclassified
     if _sectors_reclassified or not db_manager.async_session_maker:
@@ -1189,39 +1230,37 @@ async def reclassify_sectors() -> int:
 
     changed = 0
     async with db_manager.async_session_maker() as session:
+        full = (await _get_marker(session, _SECTOR_MARKER_KEY)) != SECTOR_RULES_VERSION
         recruiter_ids = set((await session.execute(select(Job_postings.job_id))).scalars().all())
-        # Seulement les offres SANS secteur canonique : la refonte a déjà été appliquée en
-        # prod et les nouvelles offres arrivent classées. Reclasser tout à chaque réveil
-        # bloquait le serveur ~1 min sur l'offre gratuite (0,1 CPU) → Render « wake error ».
-        rows = (await session.execute(
-            select(Job_offers).where(
-                Job_offers.source.isnot(None),
-                or_(Job_offers.sector.is_(None), Job_offers.sector.notin_(_CANONICAL_SECTORS)),
-            )
-        )).scalars().all()
-        rows = [job for job in rows if job.id not in recruiter_ids]
+        stmt = select(Job_offers)
+        if not full:
+            stmt = stmt.where(or_(Job_offers.sector.is_(None), Job_offers.sector.notin_(_CANONICAL_SECTORS)))
+        rows = [job for job in (await session.execute(stmt)).scalars().all() if job.id not in recruiter_ids]
         inputs = [(job.sector, job.title or "", job.description or "") for job in rows]
+        derived = set(_CANONICAL_SECTORS) | _LEGACY_CANONICAL_SECTORS
 
         def _compute() -> List[Optional[str]]:
             out: List[Optional[str]] = []
             for sector, title, description in inputs:
-                raw = sector if sector and sector not in _LEGACY_CANONICAL_SECTORS else None
+                # Un secteur canonique en base a été DÉDUIT (souvent à tort) : ignoré ;
+                # un libellé brut de source reste un indice.
+                raw = sector if sector and sector not in derived else None
                 new = normalize_sector(raw, title, description)
-                if new == "Autres" and sector in _LEGACY_CANONICAL_SECTORS:
+                if new == "Autres" and sector in derived and sector != "Autres":
                     new = sector  # rien de mieux : on garde l'ancien
                 out.append(new)
             return out
 
-        # Calcul regex hors de la boucle asyncio : le serveur continue de répondre.
         results = await asyncio.to_thread(_compute) if inputs else []
         for job, new in zip(rows, results):
             if new and new != job.sector:
                 job.sector = new
                 changed += 1
-        if changed:
-            await session.commit()
+        if full:
+            await _set_marker(session, _SECTOR_MARKER_KEY, SECTOR_RULES_VERSION)
+        await session.commit()
     _sectors_reclassified = True
-    logger.info("Aggregator: secteur reclassé sur %d offre(s)", changed)
+    logger.info("Aggregator: secteur reclassé sur %d offre(s)%s", changed, " (passe complète)" if full else "")
     return changed
 
 
@@ -1243,41 +1282,54 @@ def _extract_prose(page: str) -> Optional[str]:
     return None
 
 
-async def enrich_short_descriptions(client: httpx.AsyncClient, limit: int = 40) -> int:
+async def enrich_short_descriptions(client: httpx.AsyncClient, limit: int = 25) -> int:
     """Complète les descriptions tronquées (~200 car.) d'AfriqueEmplois depuis la page
-    détail, par lots (politesse). Recalcule employeur et secteur avec le texte complet."""
+    détail, par lots (politesse). Recalcule employeur et secteur avec le texte complet.
+
+    Robuste aux interruptions (redémarrages fréquents sur l'offre gratuite) : aucune
+    transaction ouverte pendant les téléchargements, enregistrement offre par offre, et
+    ordre aléatoire pour qu'une page récalcitrante ne bloque pas toujours le même lot.
+    """
     if not db_manager.async_session_maker:
         return 0
     from sqlalchemy import func, select
 
     from models.job_offers import Job_offers
 
-    enriched = 0
     async with db_manager.async_session_maker() as session:
-        rows = (await session.execute(
-            select(Job_offers)
+        candidates = (await session.execute(
+            select(Job_offers.id, Job_offers.source_url)
             .where(Job_offers.source == "AfriqueEmplois", func.length(Job_offers.description) < 400,
                    Job_offers.source_url.isnot(None))
-            .order_by(Job_offers.id.desc())
-        )).scalars().all()
-        rows = [r for r in rows if r.id not in _enrich_attempted][:limit]
-        for job in rows:
-            _enrich_attempted.add(job.id)
-            page = await _fetch(client, job.source_url)
+            .order_by(func.random())
+        )).all()
+    batch = [(jid, url) for jid, url in candidates if jid not in _enrich_attempted][:limit]
+
+    enriched = 0
+    for job_id, url in batch:
+        _enrich_attempted.add(job_id)
+        try:
+            page = await _fetch(client, url)
             await asyncio.sleep(0.7)
             body = _extract_prose(page or "")
             text = _html_to_text(body or "")
-            if len(text) <= len(job.description or ""):
+            if len(text) < 400:
                 continue
-            job.description = text[:4000]
-            if job.company == CONFIDENTIAL_EMPLOYER:
-                job.company = (infer_employer(job.title, body) or CONFIDENTIAL_EMPLOYER)[:255]
-            job.sector = normalize_sector(None, job.title or "", job.description)
-            enriched += 1
-        if enriched:
-            await session.commit()
-    if rows:
-        logger.info("Aggregator: %d/%d description(s) complétée(s)", enriched, len(rows))
+            async with db_manager.async_session_maker() as session:
+                job = await session.get(Job_offers, job_id)
+                if not job or len(text) <= len(job.description or ""):
+                    continue
+                job.description = text[:4000]
+                if job.company == CONFIDENTIAL_EMPLOYER:
+                    job.company = (infer_employer(job.title, body) or CONFIDENTIAL_EMPLOYER)[:255]
+                job.sector = normalize_sector(None, job.title or "", job.description)
+                await session.commit()
+                enriched += 1
+        except Exception as exc:  # pragma: no cover - défensif
+            logger.warning("Aggregator: complétion de l'offre %s échouée : %s", job_id, exc)
+    if batch:
+        logger.info("Aggregator: %d/%d description(s) complétée(s) (%d restantes)",
+                    enriched, len(batch), max(0, len(candidates) - enriched))
     return enriched
 
 
@@ -1303,6 +1355,13 @@ async def run_aggregation() -> int:
     headers = {"User-Agent": USER_AGENT, "Accept-Language": "fr-FR,fr;q=0.9"}
     try:
         async with httpx.AsyncClient(headers=headers, timeout=20.0, follow_redirects=True) as client:
+            # En TÊTE de passe : une passe complète (11 sources) est souvent interrompue
+            # par un redémarrage avant la fin sur l'offre gratuite.
+            if any(str(src["name"]) == "AfriqueEmplois" for src in sources):
+                try:
+                    await enrich_short_descriptions(client)
+                except Exception as exc:  # pragma: no cover - défensif
+                    logger.error("Aggregator: enrichissement des descriptions en échec: %s", exc)
             async with db_manager.async_session_maker() as session:
                 service = Job_offersService(session)
 
@@ -1327,11 +1386,6 @@ async def run_aggregation() -> int:
                     inserted += src_inserted
                     logger.info("Aggregator[%s]: %d nouvelle(s) offre(s)", name, src_inserted)
 
-            if any(str(src["name"]) == "AfriqueEmplois" for src in sources):
-                try:
-                    await enrich_short_descriptions(client)
-                except Exception as exc:  # pragma: no cover - défensif
-                    logger.error("Aggregator: enrichissement des descriptions en échec: %s", exc)
     except Exception as exc:  # pragma: no cover - défensif
         logger.error("Aggregator: passe interrompue: %s", exc, exc_info=True)
 
