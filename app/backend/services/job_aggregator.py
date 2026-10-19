@@ -1171,6 +1171,7 @@ _LEGACY_CANONICAL_SECTORS = {
     "Hôtellerie / Tourisme",
 }
 _sectors_reclassified = False
+_CANONICAL_SECTORS = [label for label, _ in _SECTOR_RULES] + ["Autres"]
 
 
 async def reclassify_sectors() -> int:
@@ -1181,7 +1182,7 @@ async def reclassify_sectors() -> int:
     global _sectors_reclassified
     if _sectors_reclassified or not db_manager.async_session_maker:
         return 0
-    from sqlalchemy import select
+    from sqlalchemy import or_, select
 
     from models.job_offers import Job_offers
     from models.job_postings import Job_postings
@@ -1189,14 +1190,31 @@ async def reclassify_sectors() -> int:
     changed = 0
     async with db_manager.async_session_maker() as session:
         recruiter_ids = set((await session.execute(select(Job_postings.job_id))).scalars().all())
-        rows = (await session.execute(select(Job_offers).where(Job_offers.source.isnot(None)))).scalars().all()
-        for job in rows:
-            if job.id in recruiter_ids:
-                continue
-            raw = job.sector if job.sector and job.sector not in _LEGACY_CANONICAL_SECTORS else None
-            new = normalize_sector(raw, job.title or "", job.description or "")
-            if new == "Autres" and job.sector in _LEGACY_CANONICAL_SECTORS:
-                new = job.sector  # rien de mieux : on garde l'ancien
+        # Seulement les offres SANS secteur canonique : la refonte a déjà été appliquée en
+        # prod et les nouvelles offres arrivent classées. Reclasser tout à chaque réveil
+        # bloquait le serveur ~1 min sur l'offre gratuite (0,1 CPU) → Render « wake error ».
+        rows = (await session.execute(
+            select(Job_offers).where(
+                Job_offers.source.isnot(None),
+                or_(Job_offers.sector.is_(None), Job_offers.sector.notin_(_CANONICAL_SECTORS)),
+            )
+        )).scalars().all()
+        rows = [job for job in rows if job.id not in recruiter_ids]
+        inputs = [(job.sector, job.title or "", job.description or "") for job in rows]
+
+        def _compute() -> List[Optional[str]]:
+            out: List[Optional[str]] = []
+            for sector, title, description in inputs:
+                raw = sector if sector and sector not in _LEGACY_CANONICAL_SECTORS else None
+                new = normalize_sector(raw, title, description)
+                if new == "Autres" and sector in _LEGACY_CANONICAL_SECTORS:
+                    new = sector  # rien de mieux : on garde l'ancien
+                out.append(new)
+            return out
+
+        # Calcul regex hors de la boucle asyncio : le serveur continue de répondre.
+        results = await asyncio.to_thread(_compute) if inputs else []
+        for job, new in zip(rows, results):
             if new and new != job.sector:
                 job.sector = new
                 changed += 1
