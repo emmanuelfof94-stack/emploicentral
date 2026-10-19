@@ -6,8 +6,8 @@
 # --- Étape 1 : build du SPA ---
 FROM node:20-slim AS frontend
 WORKDIR /fe
-ENV OVERVIEW_TITLE="EmploiCentral" \
-    OVERVIEW_DESCRIPTION="Une plateforme intelligente pour centraliser les opportunités d'emploi."
+ENV OVERVIEW_TITLE="EmploiCentral — Offres d'emploi en Côte d'Ivoire et Afrique de l'Ouest" \
+    OVERVIEW_DESCRIPTION="Toutes les offres d'emploi de Côte d'Ivoire et d'Afrique de l'Ouest au même endroit : matching avec votre CV, CV optimisé ATS, alertes WhatsApp et formations."
 RUN corepack enable && corepack prepare pnpm@9 --activate
 COPY app/frontend/package.json app/frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile, useBatchScores } from '../hooks/useApi';
 import { useAlertMatches } from '../hooks/useAlertMatches';
+import { profileCompletion as computeCompletion } from '../lib/profileCompletion';
 import Navbar from '../components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -34,11 +35,7 @@ export default function Dashboard() {
   );
   const { newCount: newAlerts } = useAlertMatches();
 
-  const profileCompletion = profile
-    ? [profile.full_name, profile.skills, profile.experience_years, profile.cv_analyzed].filter(
-        Boolean
-      ).length * 25
-    : 0;
+  const { percent: profileCompletion, next: nextStep } = computeCompletion(profile);
 
   const bestScore = scores.length > 0 ? scores[0] : null;
 
@@ -100,7 +97,7 @@ export default function Dashboard() {
                   to="/profile"
                   className="text-sm text-blue-600 hover:underline mt-3 inline-flex items-center gap-1"
                 >
-                  Compléter <ArrowRight className="w-3 h-3" />
+                  {nextStep ? nextStep.hint : 'Compléter'} <ArrowRight className="w-3 h-3" />
                 </Link>
               )}
             </CardContent>

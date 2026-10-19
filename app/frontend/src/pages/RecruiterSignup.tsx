@@ -82,8 +82,9 @@ export default function RecruiterSignup() {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="recrutement@entreprise.com" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Téléphone (facultatif)</Label>
+              <Label htmlFor="phone">Numéro WhatsApp (recommandé)</Label>
               <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+225 …" />
+              <p className="text-xs text-slate-500">Les candidats pourront postuler directement via WhatsApp.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Mot de passe *</Label>

@@ -16,3 +16,12 @@ export function waContactUrl(
 export function waShareUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
+
+/** Lien wa.me pour POSTULER auprès d'un recruteur (numéro au format wa.me). */
+export function waApplyUrl(phone: string, jobTitle: string, company?: string | null): string {
+  const text =
+    `Bonjour, je suis intéressé(e) par votre offre « ${jobTitle} »` +
+    (company ? ` chez ${company}` : '') +
+    ` vue sur EmploiCentral. Je souhaite vous transmettre ma candidature.`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+}

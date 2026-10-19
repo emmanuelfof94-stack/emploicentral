@@ -8,6 +8,7 @@ import {
   useUserJobActions,
   useCvTemplates,
   useInterviewPrep,
+  useJobContact,
   type Job,
   type UserJob,
 } from '../hooks/useApi';
@@ -33,7 +34,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Search, MapPin, Building2, Banknote, Briefcase, Target, FileDown, FileText, Loader2, CalendarClock, CalendarDays, Bookmark, ExternalLink, Palette, MessageCircle, Mic, Sparkles } from 'lucide-react';
-import { waShareUrl } from '../lib/whatsapp';
+import { waShareUrl, waApplyUrl } from '../lib/whatsapp';
 
 interface ScoreItem {
   job_id: number;
@@ -259,6 +260,8 @@ export default function Jobs() {
   const [sourceFilter, setSourceFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'score' | 'recent'>('score');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  // Offres publiées par un recruteur (sans annonce source) : contact WhatsApp direct.
+  const { data: jobContact } = useJobContact(selectedJob?.id, !!selectedJob && !selectedJob.source_url);
 
   // Map job_id → score detail (computed once from the cached batch result)
   const scoreById = useMemo(() => {
@@ -597,6 +600,23 @@ export default function Jobs() {
                         {selectedJob.source ? (
                           <span className="ml-1 opacity-80">— {selectedJob.source}</span>
                         ) : null}
+                      </Button>
+                    </a>
+                  ) : jobContact?.whatsapp ? (
+                    <a
+                      href={waApplyUrl(jobContact.whatsapp, selectedJob.title, jobContact.company_name || selectedJob.company)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      onClick={() => {
+                        if (!userJobByJob.get(selectedJob.id)?.status) {
+                          setStatusFor(selectedJob, 'applied');
+                        }
+                      }}
+                    >
+                      <Button type="button" className="w-full bg-[#25D366] hover:bg-[#1ebe5b] text-white">
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Postuler via WhatsApp
                       </Button>
                     </a>
                   ) : (

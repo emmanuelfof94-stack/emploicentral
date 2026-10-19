@@ -191,7 +191,8 @@ function getSiteDomainUrl() {
 }
 
 function getSiteName() {
-  return import.meta.env.VITE_APP_TITLE?.trim() || 'Atoms';
+  // Nom de marque court : VITE_APP_TITLE est le titre SEO complet (déjà échappé HTML).
+  return 'EmploiCentral';
 }
 
 function getTwitterSiteHandle() {
