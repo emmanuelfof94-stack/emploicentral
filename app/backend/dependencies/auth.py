@@ -16,18 +16,14 @@ bearer_scheme = HTTPBearer(auto_error=False)
 async def get_bearer_token(
     request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme)
 ) -> str:
-    """Extract bearer token from Authorization header, or from a `token` query param.
+    """Extract bearer token from the Authorization header.
 
-    Le repli par query param sert aux téléchargements déclenchés par une navigation
-    directe (balise <a>/window.open) : Android refuse de télécharger un blob: et exige
-    une vraie URL https, donc on ouvre un GET qui porte le JWT dans `?token=`.
+    Le JWT n'est plus accepté en query param (`?token=`) : une URL finit dans les
+    journaux serveur, l'historique et le Referer. Les téléchargements par navigation
+    directe (Android) utilisent le jeton à usage unique `?dl=` (voir get_download_user).
     """
     if credentials and credentials.scheme.lower() == "bearer":
         return credentials.credentials
-
-    qtoken = request.query_params.get("token")
-    if qtoken:
-        return qtoken
 
     logger.debug("Authentication required for request %s %s", request.method, request.url.path)
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication credentials were not provided")
@@ -76,8 +72,8 @@ async def get_download_user(request: Request) -> UserResponse:
     """Auth pour les téléchargements de fichiers via navigation directe (Android).
 
     Priorité au jeton de téléchargement à usage unique `?dl=...` (ne met pas le JWT
-    dans l'URL) ; à défaut, on retombe sur l'authentification standard (en-tête
-    Authorization ou `?token=`). Le jeton `dl` est consommé (usage unique).
+    dans l'URL) ; à défaut, on retombe sur l'en-tête Authorization. Le jeton `dl` est
+    consommé (usage unique).
     """
     from services import download_tokens
 
@@ -91,13 +87,11 @@ async def get_download_user(request: Request) -> UserResponse:
             )
         return UserResponse(id=user_id, email="", role="user")
 
-    # Repli : token via l'en-tête Authorization, sinon via `?token=`. On extrait à la
-    # main (ne PAS appeler get_bearer_token directement : son paramètre `credentials`
-    # ne serait pas injecté hors du système de dépendances FastAPI).
+    # Repli : token via l'en-tête Authorization. On extrait à la main (ne PAS appeler
+    # get_bearer_token directement : son paramètre `credentials` ne serait pas injecté
+    # hors du système de dépendances FastAPI).
     auth_header = request.headers.get("authorization") or ""
     token = auth_header[7:].strip() if auth_header[:7].lower() == "bearer " else ""
-    if not token:
-        token = request.query_params.get("token") or ""
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

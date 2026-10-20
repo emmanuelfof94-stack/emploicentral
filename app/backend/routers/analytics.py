@@ -9,6 +9,8 @@ quotidienne (pas de cookie, pas de bannière RGPD nécessaire).
 import hashlib
 import logging
 import re
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlparse
@@ -40,6 +42,29 @@ _BOT_RE = re.compile(
 class TrackPayload(BaseModel):
     path: str
     referrer: Optional[str] = None
+
+
+# Limite d'enregistrement par visiteur (IP) : la route est publique et sans compte,
+# un script pouvait gonfler les statistiques et remplir la base. 60 vues / minute
+# couvrent largement une navigation humaine ; au-delà, les vues sont ignorées en silence.
+TRACK_MAX_PER_WINDOW = 60
+TRACK_WINDOW_SECONDS = 60
+_track_hits: "defaultdict[str, deque]" = defaultdict(deque)
+
+
+def _track_allowed(ip: str) -> bool:
+    now = time.monotonic()
+    hits = _track_hits[ip]
+    while hits and now - hits[0] > TRACK_WINDOW_SECONDS:
+        hits.popleft()
+    if len(hits) >= TRACK_MAX_PER_WINDOW:
+        return False
+    hits.append(now)
+    # Purge opportuniste des visiteurs inactifs (borne la mémoire).
+    if len(_track_hits) > 5000:
+        for k in [k for k, v in _track_hits.items() if not v or now - v[-1] > TRACK_WINDOW_SECONDS]:
+            _track_hits.pop(k, None)
+    return True
 
 
 def _client_ip(request: Request) -> str:
@@ -81,11 +106,14 @@ async def track(payload: TrackPayload, request: Request, db: AsyncSession = Depe
         if not path.startswith("/"):
             path = "/" + path
 
-        ua = (request.headers.get("user-agent") or "")[:400]
+        ip = _client_ip(request)
+        if not _track_allowed(ip):
+            return None
+
+        ua = (request.headers.get("user-agent") or "")[:200]
         is_bot = bool(_BOT_RE.search(ua))
         own_host = urlparse(str(getattr(settings, "frontend_url", "") or "")).netloc.lower()
 
-        ip = _client_ip(request)
         day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         view = PageView(
