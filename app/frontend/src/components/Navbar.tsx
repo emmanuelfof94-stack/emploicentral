@@ -16,6 +16,7 @@ import {
   Shield,
   GraduationCap,
   Building2,
+  Store,
   Library,
   CreditCard,
   Users,
@@ -66,6 +67,7 @@ const adminLinks: NavLink[] = [
 // L'espace recruteur a son propre jeu de liens réduit.
 const recruiterLinks: NavLink[] = [
   { to: '/recruiter', label: 'Espace recruteur', icon: Building2 },
+  { to: '/recruiter/company', label: 'Mon entreprise', icon: Store },
   { to: '/profile', label: 'Profil', icon: User },
 ];
 

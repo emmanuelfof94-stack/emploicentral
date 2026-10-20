@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import PushToggle from '../components/PushToggle';
 import { client } from '../lib/api';
 import { useAlertPrefs, useJobs, useInvalidate, useProfile, type AlertPrefs } from '../hooks/useApi';
 import { useAlertMatches } from '../hooks/useAlertMatches';
@@ -244,11 +245,12 @@ export default function Alerts() {
                       onCheckedChange={(c) => setPrefs((p) => ({ ...p, notify_whatsapp: c }))}
                     />
                   </div>
+                  <PushToggle />
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
                   L&apos;email est activé par défaut : dès qu&apos;une nouvelle offre correspond à votre
                   profil, vous êtes notifié à l&apos;adresse de votre profil (décochez pour vous désabonner).
-                  La cloche in-app fonctionne toujours ; WhatsApp nécessite votre numéro et la config serveur.
+                  La cloche in-app fonctionne toujours ; WhatsApp nécessite votre numéro et la config serveur. Les notifications sur l&apos;appareil s&apos;activent immédiatement, sans enregistrer.
                 </p>
               </div>
 
