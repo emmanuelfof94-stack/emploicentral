@@ -40,6 +40,7 @@ const CourseAccess = lazy(() => import('./pages/CourseAccess'));
 const PaymentReturn = lazy(() => import('./pages/PaymentReturn'));
 const AdminCoursePurchases = lazy(() => import('./pages/AdminCoursePurchases'));
 const MarketTrends = lazy(() => import('./pages/MarketTrends'));
+const Assistant = lazy(() => import('./pages/Assistant'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const AuthError = lazy(() => import('./pages/AuthError'));
 
@@ -80,6 +81,7 @@ const AppRoutes = () => (
     <Route path="/cours/:slug" element={<ProtectedRoute><CourseAccess /></ProtectedRoute>} />
     <Route path="/paiement/retour" element={<ProtectedRoute><PaymentReturn /></ProtectedRoute>} />
     <Route path="/market" element={<ProtectedRoute><MarketTrends /></ProtectedRoute>} />
+    <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
     <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
     <Route path="/admin/moderation" element={<ProtectedAdminRoute><AdminModeration /></ProtectedAdminRoute>} />

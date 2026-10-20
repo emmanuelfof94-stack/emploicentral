@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   TrendingUp,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +40,7 @@ type NavLink = { to: string; label: string; icon: typeof LayoutDashboard };
 const primaryLinks: NavLink[] = [
   { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { to: '/jobs', label: 'Emplois', icon: Briefcase },
+  { to: '/assistant', label: 'Assistant', icon: Sparkles },
   { to: '/applications', label: 'Mes candidatures', icon: Bookmark },
   { to: '/alerts', label: 'Alertes', icon: Bell },
   { to: '/trainings', label: 'Formations', icon: GraduationCap },
